@@ -639,6 +639,7 @@ export function lint(spec) {
   const arrows = lines.reduce((a, l) => a + (l.match(/→/g) || []).length, 0);
   // 숫자 든 줄 비율 — 샘플 계획서 16%, 결과·중간보고서 34% → 기준 30% / 45%. 보도자료는 서술문·본문 위주라 표 비율을 보지 않는다
   const kind = spec.kind || 'plan';
+  const changed = Object.keys(spec.theme || {}).filter((k) => ['size', 'tableSize', 'lineSpacing', 'page', 'headerFill', 'soft', 'accent'].includes(k) && JSON.stringify(spec.theme[k]) !== JSON.stringify(THEME[k]));
   const numMax = kind === 'plan' ? 0.3 : 0.45;
   const checks = [
     [avg(sq) <= 15, `□ 평균 ${avg(sq)}자 (제목구, ≤15)`],
@@ -648,6 +649,8 @@ export function lint(spec) {
     [arrows === 0, `→ ${arrows}개 (0)`],
     [paren <= 0.1 * Math.max(1, ci.length + da.length), `(소제목) ${paren}줄 (○·- 의 10% 이하)`],
     [kind === 'press' || tab >= body, `표 글자 ${tab} ≥ 본문 ${body}${kind === 'press' ? ' (보도자료는 제외)' : ''}`],
+    // 분량을 맞추려고 글자·줄 간격·여백을 줄이면 실제 문서와 달라진다 — 기본값이 실측값. 양식이 요구할 때만 theme.page 등을 바꾼다
+    [!changed.length, `theme 기본값 유지${changed.length ? ` — 바뀜: ${changed.join(', ')} (분량은 내용으로 맞춘다)` : ''}`],
   ];
   return checks.map(([ok, msg]) => `${ok ? 'OK' : 'NG'}  ${msg}`);
 }

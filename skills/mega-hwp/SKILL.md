@@ -3,7 +3,7 @@ name: mega-hwp
 description: 한글(HWP/HWPX) 문서를 읽고, 만들고, 양식을 채운다. 사용자가 .hwp/.hwpx 파일을 주거나 사업계획서·결과보고서·중간보고서·월간보고·연구개발계획서·공문·제안서를 한글 파일로 만들어 달라고 할 때, 또는 정부과제 양식(작성요령이 있는 빈 양식)을 채워 달라고 할 때 사용. text(HWP→마크다운) → doc.json/fill.json 작성 → build/fill로 편집 가능한 .hwp 생성 → 페이지 PNG로 시각 검수. 한국어 우선.
 license: MIT
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 # mega-hwp
@@ -34,7 +34,9 @@ node $SKILL/scripts/hwp.mjs hancom out.hwp                         # out-hancom/
 
 ### 3-A. 새 문서 → [`references/schema.md`](references/schema.md)
 `doc.json`의 `blocks`에 `title`·`toc`·`chapter`·`section`·`h2`·`h3`·`text`·`table`·`box`·`guide`·`image`·`pagebreak`를 순서대로 쓴다. 예시: [`examples/sample.json`](examples/sample.json).
-- 제목 위계: `chapter`(Ⅰ.) → `h2`(1.) → [`section`(①, 결과보고서)] → `h3`(가.) → `text`의 □ ○ -.
+- **새 문서의 기본 뼈대** — 분량과 관계없이 같은 모양으로 만든다: `title`(표지) → 개정 이력·요약이 필요하면 그 표 → 10쪽 이상이면 `toc` → `chapter`("Ⅰ. 개요" — 장 제목 띠) → `h2` … 짧은 동향 보고서도 표지와 장 띠를 쓴다.
+**`theme`는 바꾸지 않는다.** 글자 크기·줄 간격·여백·색은 실제 정부 문서를 잰 기본값이다. "5쪽 정도"는 내용(절·표 수)으로 맞추고, 글자·줄 간격·여백을 줄여 맞추지 않는다. 양식·공고가 여백이나 글자를 정할 때만 그 값으로 바꾼다(`lint`가 바뀐 값을 NG로 알린다).
+제목 위계: `chapter`(Ⅰ.) → `h2`(1.) → [`section`(①, 결과보고서)] → `h3`(가.) → `text`의 □ ○ -.
 - 본문은 `text` 블록에 **기호로 시작하는 줄**로 쓴다: `□`(제목구) → `○`(요지 한 줄) → `-`(근거·방법) → `·`(보충), `※`(주석), `⇒`(결론). → [`references/style-guide.md`](references/style-guide.md)
 - **표와 그림으로 쪽을 채운다.** 실제 문서는 표 속 글자가 본문보다 많고(1.2~16배) 쪽당 그림이 0.6개 이상이다. 개요·목표·일정·인력·예산·실적·산출물·위험은 표로 쓴다.
 - 다이어그램(체계도·구성도·흐름도·로드맵·차트)은 mega-diagram으로 투명 PNG를 만들어 `image`로 넣는다.
