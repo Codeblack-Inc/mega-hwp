@@ -39,6 +39,13 @@ jobs:
       - name: Build gallery
         run: node gallery/build.mjs site
 
+      - name: Skill zip (Claude 앱 Chat 업로드용, 엔진 포함)
+        run: |
+          rm -rf /tmp/zip && mkdir -p /tmp/zip && cp -R skills/mega-hwp /tmp/zip/ && cd /tmp/zip/mega-hwp
+          mkdir -p vendor/rhwp-core vendor/fflate && cp node_modules/@rhwp/core/rhwp.js node_modules/@rhwp/core/rhwp_bg.wasm node_modules/@rhwp/core/LICENSE vendor/rhwp-core/
+          cp node_modules/fflate/esm/index.mjs node_modules/fflate/LICENSE vendor/fflate/ && rm -rf node_modules
+          cd .. && zip -qr "$GITHUB_WORKSPACE/site/mega-hwp-skill.zip" mega-hwp -x '*.DS_Store'
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

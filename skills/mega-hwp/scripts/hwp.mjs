@@ -22,8 +22,11 @@ const warn = (m) => WARN.push(m);
 
 // ── engine ────────────────────────────────────────────────────────────────
 export async function loadCore() {
-  const dir = path.join(SKILL, 'node_modules/@rhwp/core');
-  if (!fs.existsSync(dir) || !fs.existsSync(path.join(SKILL, 'node_modules/fflate'))) {
+  // vendor/ = 엔진을 동봉한 스킬 zip(Claude 앱 Chat 업로드용 — zip 경로에 '@'를 못 쓴다). 없으면 node_modules
+  const vendor = fs.existsSync(path.join(SKILL, 'vendor/rhwp-core/rhwp.js'));
+  const dir = path.join(SKILL, vendor ? 'vendor/rhwp-core' : 'node_modules/@rhwp/core');
+  const fflate = path.join(SKILL, vendor ? 'vendor/fflate/index.mjs' : 'node_modules/fflate/esm/index.mjs');
+  if (!vendor && (!fs.existsSync(dir) || !fs.existsSync(path.join(SKILL, 'node_modules/fflate')))) {
     console.error('[mega-hwp] 최초 1회 @rhwp/core 설치 중…');
     execFileSync('npm', ['install', '--silent', '--no-audit', '--no-fund'], { cwd: SKILL, stdio: 'inherit' });
   }
@@ -37,7 +40,7 @@ export async function loadCore() {
     }
     return w;
   };
-  ({ unzipSync, zipSync, strToU8, strFromU8 } = await import(path.join(SKILL, 'node_modules/fflate/esm/index.mjs')));
+  ({ unzipSync, zipSync, strToU8, strFromU8 } = await import(fflate));
   const core = await import(path.join(dir, 'rhwp.js'));
   await core.default({ module_or_path: fs.readFileSync(path.join(dir, 'rhwp_bg.wasm')) });
   return core;
