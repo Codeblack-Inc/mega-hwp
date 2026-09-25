@@ -63,4 +63,17 @@ const lines = text(filled).split('\n');
 assert.equal(lines[0], '과업명|예약 시스템|기업명|메가투어');
 assert.deepEqual(lines.slice(1), ['1. 사업목표', '○ 예약 완료율 55% 달성', '2. 기타 사항']);
 
+// 3. 그림: 저장 후 다시 열어도 그림 컨트롤이 남아 있어야 한다
+const imgSpec = path.join(tmp, 'img.json');
+fs.writeFileSync(imgSpec, JSON.stringify({ blocks: [
+  { type: 'text', lines: ['□ 그림 앞'] },
+  { type: 'image', path: path.join(root, 'gallery/assets/concept.png'), width: 120, caption: '구성도' },
+] }));
+for (const ext of ['hwp', 'hwpx']) {
+  const out = path.join(tmp, `img.${ext}`);
+  assert.deepEqual(await main(['build', imgSpec, '-o', out]), []);
+  assert.equal(JSON.parse(open(out).getControls()).filter((c) => c.ctrlId === 'gso').length, 1, `${ext}: 그림 없음`);
+  assert.ok(text(out).includes('<그림 1> 구성도'), `${ext}: 그림 번호`);
+}
+
 console.log(`ok — ${tmp}`);

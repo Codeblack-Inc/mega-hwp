@@ -14,9 +14,9 @@ metadata:
 
 ```bash
 node $SKILL/scripts/hwp.mjs text   in.hwp                          # 읽기: 본문+표 → 마크다운 (표 주소 포함)
-node $SKILL/scripts/hwp.mjs build  doc.json -o out.hwp             # 새 문서 (.hwpx로 쓰면 HWPX)
-node $SKILL/scripts/hwp.mjs fill   form.hwp fill.json -o out.hwp   # 양식 채우기
-node $SKILL/scripts/hwp.mjs render out.hwp [--pages 1-3]           # out/page-NN.png (rhwp 렌더)
+node $SKILL/scripts/hwp.mjs build  doc.json -o out.hwp --render    # 새 문서 + out/page-NN.png (.hwpx로 쓰면 HWPX)
+node $SKILL/scripts/hwp.mjs fill   form.hwp fill.json -o out.hwp --render   # 양식 채우기 + out/page-NN.png
+node $SKILL/scripts/hwp.mjs render in.hwp [--pages 1-3]            # 받은 파일 미리보기 (in/page-NN.png)
 node $SKILL/scripts/hwp.mjs hancom out.hwp                         # out-hancom/hancom-NN.png (macOS, 실제 한컴 화면)
 ```
 
@@ -48,7 +48,7 @@ node $SKILL/scripts/hwp.mjs hancom out.hwp                         # out-hancom/
 ### 5. 시각 검수 (생략 금지)
 PNG를 **모두 직접 열어 보고** 표 넘침, 빈 쪽, 들여쓰기·내어쓰기, 병합, 칸 배경, 자리표시가 남았는지 확인한다. 고친 뒤 다시 빌드·검수한다.
 - **macOS에 한컴오피스가 있으면 `hancom`으로 검수한다.** 실제 한컴 조판 결과라 가장 정확하다. 파일을 임시 이름으로 복사해 열고, 한컴 창만 캡처한 뒤 그 창만 닫는다. 권한 오류가 나면 사용자에게 시스템 설정 → 개인정보 보호 및 보안의 **화면 기록**과 **손쉬운 사용**에 명령을 실행하는 앱(Claude Code: `~/Library/Application Support/Claude/claude-code/<버전>/claude.app`)을 추가하고 앱을 다시 실행해 달라고 안내한다.
-- 그 밖에는 `render`(rhwp 렌더)를 쓴다. 글자 폭이 근사치라 줄바꿈 위치가 한컴과 조금 다를 수 있으니, 마지막에 사용자에게 한컴오피스로 열어 확인하라고 알린다.
+- 그 밖에는 build/fill의 `--render` PNG(rhwp 렌더)를 본다. 이미 저장된 mega-hwp 결과 파일을 `render`로 다시 그리면 그림이 빠지므로(rhwp 한계, 한컴에서는 정상) 결과 검수에는 쓰지 않는다. 글자 폭이 근사치라 줄바꿈 위치가 한컴과 조금 다를 수 있으니, 마지막에 사용자에게 한컴오피스로 열어 확인하라고 알린다.
 
 ## 원칙
 - **개조식 명사형 종결**: "~ 확보", "~ 구축", "~ 필요". 한 항목은 1~2줄.

@@ -12,7 +12,7 @@ Claude Code + Codex 플러그인. 공용 스킬은 `skills/mega-hwp/` 하나 —
 - 블록 추가: `Writer.block`의 switch → `references/schema.md` → `examples/sample.json`
 - 테스트: `node tests/test.mjs`
 - 한컴 검수: `node skills/mega-hwp/scripts/hwp.mjs hancom /tmp/s.hwp` → `/tmp/s-hancom/hancom-NN.png`. rhwp 렌더와 한컴 화면이 다르면 한컴이 맞다. 레이아웃·서식을 바꿨으면 반드시 한컴으로도 본다
-- 시각 확인: `node skills/mega-hwp/scripts/hwp.mjs build skills/mega-hwp/examples/sample.json -o /tmp/s.hwp && node skills/mega-hwp/scripts/hwp.mjs render /tmp/s.hwp`
-- 갤러리: `node gallery/build.mjs` → `site/` (sample.json + `gallery/*.json` 예시, rsvg-convert 필요). main에 push하면 `.github/workflows/pages.yml`이 Noto CJK 폰트를 설치하고 빌드·배포. 예시를 바꾸면 `hwp.mjs hancom`으로 한컴 화면도 확인한다(갤러리 문구가 "한컴오피스에서 확인"이라고 말한다)
+- 시각 확인: `node skills/mega-hwp/scripts/hwp.mjs build skills/mega-hwp/examples/sample.json -o /tmp/s.hwp --render` → `/tmp/s/page-NN.png`. 저장된 파일을 `render`하면 그림만 있는 문단이 높이 0이 되어 그림이 빠진다(줄 배치를 지운 탓, 한컴은 정상) — 그래서 `--render`는 저장 전 메모리 문서로 그린다
+- 갤러리: `node gallery/build.mjs` → `site/` (sample.json + `gallery/*.json` 예시, rsvg-convert 필요). 예시 그림은 `gallery/mocks/*.html`을 Chrome 헤드리스로 캡처해 `gallery/assets/`에 커밋(CI는 재생성하지 않음, 가상 화면만). main에 push하면 `.github/workflows/pages.yml`이 Noto CJK 폰트를 설치하고 빌드·배포. 예시를 바꾸면 `hwp.mjs hancom`으로 한컴 화면도 확인한다(갤러리 문구가 "한컴오피스에서 확인"이라고 말한다)
 - 버전 올릴 때 `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`, SKILL.md `metadata.version` 함께 수정
 - 예시 콘텐츠는 가상의 과제만 쓴다 (실제 고객·과제 자료, 사용자가 준 양식 파일 커밋 금지)

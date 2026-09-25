@@ -1,0 +1,45 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Pretendard,sans-serif;background:#fff;color:#17152B;width:1600px;height:740px;padding:40px 48px;-webkit-font-smoothing:antialiased}
+.goal{background:#1F3864;color:#fff;border-radius:6px;padding:16px 24px;font-size:26px;font-weight:800;text-align:center;letter-spacing:-.02em}
+.goal small{display:block;font-size:17px;font-weight:500;opacity:.8;margin-top:4px}
+.row{display:grid;grid-template-columns:1fr 70px 1.25fr 70px 1fr;align-items:stretch;margin-top:30px;height:430px}
+.col{border:2px solid #C9D2E3;border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:14px;background:#F7F9FC}
+.col h3{font-size:21px;font-weight:800;color:#1F3864;display:flex;align-items:center;gap:10px}
+.col h3 i{font-style:normal;background:#1F3864;color:#fff;border-radius:4px;font-size:15px;padding:3px 9px}
+.box{background:#fff;border:1.5px solid #C9D2E3;border-radius:6px;padding:14px 16px;font-size:18px;font-weight:600}
+.box p{font-size:15px;font-weight:500;color:#5A6173;margin-top:4px;line-height:1.45}
+.core{border-color:#1E9E6A;background:#F1FAF5}
+.core .box.hl{border:2px solid #1E9E6A;background:#fff}
+.arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#5A6173;font-size:14px;font-weight:600;text-align:center}
+.arrow b{font-size:40px;color:#1F3864;line-height:1}
+.lock{margin-top:auto;font-size:15px;font-weight:700;color:#1E7A55;background:#E1F1E9;border-radius:4px;padding:8px 12px;text-align:center}
+.foot{margin-top:26px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.foot div{border-top:3px solid #1F3864;padding-top:10px;font-size:17px;font-weight:700}
+.foot span{display:block;font-size:15px;font-weight:500;color:#5A6173;margin-top:3px}
+</style></head><body>
+<div class="goal">경량 한국어 LLM 온디바이스 민원 상담 지원 체계<small>개인정보를 기기 밖으로 보내지 않고 상담 초안을 작성 (가상 과제 예시)</small></div>
+<div class="row">
+  <div class="col"><h3><i>입력</i>민원 창구</h3>
+    <div class="box">상담 기록<p>전화·방문 상담 메모, 민원 유형</p></div>
+    <div class="box">민원 시스템 연동<p>접수 번호, 처리 이력 조회</p></div>
+    <div class="box">상담원 60명<p>3개 기관 민원실 (가상)</p></div>
+  </div>
+  <div class="arrow"><b>→</b>기기 내<br>전달</div>
+  <div class="col core"><h3><i>처리</i>국산 NPU 노트북</h3>
+    <div class="box hl">3B 한국어 LLM (INT4)<p>행정 말뭉치 2억 토큰 추가 학습 · 초당 27토큰</p></div>
+    <div class="box">행정 용어 사전 · 법령 검색<p>기관별 용어, 인용 조문을 로컬 색인에서 검색</p></div>
+    <div class="box">개인정보 가림 처리<p>주민등록번호·주소·연락처 자동 마스킹</p></div>
+    <div class="lock">🔒 외부 전송 0건 — 모든 처리는 노트북 안에서</div>
+  </div>
+  <div class="arrow"><b>→</b>초안<br>제시</div>
+  <div class="col"><h3><i>출력</i>상담 결과</h3>
+    <div class="box">답변 초안<p>근거 조문과 함께 상담원 화면에 표시</p></div>
+    <div class="box">상담원 검토·수정<p>수정 내용은 주간 피드백으로 반영</p></div>
+    <div class="box">처리 결과 기록<p>민원 시스템에 저장</p></div>
+  </div>
+</div>
+<div class="foot"><div>초안 작성 시간<span>11.5분 → 4.4분 (목표)</span></div><div>응답 정확도<span>71% → 90% (실증)</span></div><div>확산 계획<span>2차년도 12개 기관</span></div></div>
+</body></html>

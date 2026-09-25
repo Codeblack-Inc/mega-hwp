@@ -21,27 +21,30 @@ async function run(args) {
 // 문서 하나 → hwp·hwpx + 쪽 이미지
 async function doc(key, build) {
   const hwp = path.join(OUT, 'files', `${key}.hwp`);
-  await build(hwp);
-  await build(hwp.replace(/hwp$/, 'hwpx'));
+  await build(hwp, ['--render']); // → files/<key>/page-NN.png (저장 전 문서로 렌더)
+  await build(hwp.replace(/hwp$/, 'hwpx'), []);
   const dir = path.join(OUT, 'img', key);
-  await run(['render', hwp, '-o', dir]);
+  fs.mkdirSync(path.dirname(dir), { recursive: true });
+  fs.renameSync(hwp.replace(/\.hwp$/, ''), dir);
   const pages = fs.readdirSync(dir).filter((f) => f.endsWith('.png')).sort().map((f) => `img/${key}/${f}`);
   if (pages.some((p) => !p.endsWith('.png'))) throw new Error('rsvg-convert가 필요합니다');
   return { pages, files: [`files/${key}.hwp`, `files/${key}.hwpx`] };
 }
 const src = (f) => fs.readFileSync(f, 'utf8').trim();
-const fromJson = (json) => (out) => run(['build', json, '-o', out]);
+const fromJson = (json) => (out, extra) => run(['build', json, '-o', out, ...extra]);
 
 const sample = path.join(SKILL, 'examples/sample.json');
 const form = path.join(HERE, 'form.json');
 const fill = path.join(HERE, 'fill.json');
 const report = path.join(HERE, 'report.json');
+const result = path.join(HERE, 'result.json');
 const formHwp = path.join(OUT, 'files', 'form.hwp');
 
 const plan = await doc('plan', fromJson(sample));
 const blank = await doc('form', fromJson(form));
-const filled = await doc('filled', (out) => run(['fill', formHwp, fill, '-o', out]));
+const filled = await doc('filled', (out, extra) => run(['fill', formHwp, fill, '-o', out, ...extra]));
 const monthly = await doc('report', fromJson(report));
+const figures = await doc('result', fromJson(result));
 await run(['text', formHwp, '-o', path.join(OUT, 'form.md')]);
 
 const items = [
@@ -58,6 +61,13 @@ const items = [
     tags: ['h1', 'table', 'text', 'box'],
     variants: [{ key: 'report', name: '결과', ...monthly }],
     code: { label: 'doc.json', text: src(report) },
+  },
+  {
+    key: 'result', name: '실증 결과보고서 (그림)', group: '새 문서',
+    desc: '구성도와 서비스 화면을 넣은 결과보고서. image 블록은 PNG·JPEG를 본문 폭에 맞춰 글자처럼 배치하고, 아래에 <그림 n> 번호를 붙입니다. 그림은 예시를 위해 그린 가상 도식·화면입니다.',
+    tags: ['image', 'chapter', 'text', 'table', 'pagebreak'],
+    variants: [{ key: 'result', name: '결과', ...figures }],
+    code: { label: 'doc.json', text: src(result) },
   },
   {
     key: 'fill', name: '양식 채우기', group: '양식',

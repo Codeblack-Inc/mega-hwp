@@ -1,0 +1,49 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Pretendard,sans-serif;background:#F4F6F9;color:#1B2230;width:1600px;height:680px;-webkit-font-smoothing:antialiased}
+.top{height:64px;background:#1F3864;color:#fff;display:flex;align-items:center;padding:0 28px;gap:16px;font-size:20px;font-weight:800}
+.top span{font-size:14px;font-weight:500;opacity:.8}
+.top .r{margin-left:auto;display:flex;gap:10px}
+.top .r em{font-style:normal;font-size:13px;font-weight:700;background:#1E9E6A;border-radius:4px;padding:6px 10px}
+.top .r i{font-style:normal;font-size:13px;font-weight:600;background:rgba(255,255,255,.14);border-radius:4px;padding:6px 10px}
+.wrap{display:grid;grid-template-columns:1fr 1.15fr;gap:20px;padding:22px 28px;height:calc(100% - 64px)}
+.card{background:#fff;border:1px solid #D9DFE8;border-radius:6px;padding:20px 22px;display:flex;flex-direction:column;gap:14px;min-height:0}
+h2{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}
+h2 small{font-size:13px;color:#6B7385;font-weight:600}
+.meta{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;font-size:15px}
+.meta dt{color:#6B7385;font-weight:600}
+.memo{background:#F7F9FC;border:1px solid #E3E8EF;border-radius:4px;padding:16px;font-size:16px;line-height:1.7}
+.mask{background:#1B2230;color:#1B2230;border-radius:2px;padding:0 3px}
+.mask::after{content:"●●●●";color:#fff;font-size:12px}
+.draft{font-size:16.5px;line-height:1.75;border:2px solid #1E9E6A;border-radius:4px;padding:18px;background:#FBFEFC}
+.draft b{color:#1F3864}
+.cite{font-size:14px;color:#1E7A55;background:#E1F1E9;border-radius:3px;padding:2px 6px;font-weight:700}
+.refs{display:flex;flex-direction:column;gap:8px;font-size:14.5px}
+.refs div{display:flex;justify-content:space-between;border-bottom:1px solid #EEF1F5;padding-bottom:8px}
+.refs span{color:#6B7385}
+.btns{margin-top:auto;display:flex;gap:10px}
+.btns b{padding:12px 20px;border-radius:5px;font-size:15px;border:1px solid #C9D2E3;background:#fff}
+.btns b.p{background:#1F3864;border-color:#1F3864;color:#fff}
+.stat{display:flex;gap:18px;font-size:14px;color:#6B7385;font-weight:600}
+.stat strong{color:#1B2230}
+</style></head><body>
+<div class="top">민원 상담 초안 도우미 <span>가 시청 민원실 · 가상 화면</span><div class="r"><em>오프라인 · 기기 내 처리</em><i>상담원 김OO</i></div></div>
+<div class="wrap">
+  <div class="card"><h2>상담 기록 <small>접수 2026-1105-0342</small></h2>
+    <dl class="meta"><dt>민원 유형</dt><dd>주정차 과태료 이의신청</dd><dt>민원인</dt><dd><span class="mask"></span> (개인정보 자동 가림)</dd><dt>연락처</dt><dd><span class="mask"></span></dd><dt>상담 방식</dt><dd>전화 · 6분 12초</dd></dl>
+    <div class="memo">장애인 보호구역 인근에 잠시 정차했는데 과태료가 부과되었다고 함. 당시 동승자가 휠체어 이용자로 승하차 중이었고, 사진 자료가 있음. 이의신청 절차와 제출 서류를 문의. 기한 내 신청 가능한지 확인 요청.</div>
+    <h2>참고 근거 <small>로컬 색인 검색 · 0.4초</small></h2>
+    <div class="refs"><div>도로교통법 제32조 (정차 및 주차의 금지)<span>일치 92%</span></div><div>질서위반행위규제법 제20조 (이의제기)<span>일치 88%</span></div><div>가 시청 과태료 이의신청 안내 (2026)<span>일치 85%</span></div></div>
+  </div>
+  <div class="card"><h2>답변 초안 <small>3B 한국어 LLM · 초당 27토큰 · 3.1초</small></h2>
+    <div class="draft">안녕하세요, 가 시청 민원실입니다.<br><br>
+      과태료 부과에 이의가 있으신 경우 <b>통지서를 받은 날부터 60일 이내</b>에 이의제기를 하실 수 있습니다. <span class="cite">질서위반행위규제법 제20조</span><br><br>
+      승하차를 위한 일시 정차였다는 점을 확인할 수 있도록 <b>당시 사진</b>과 <b>동승자의 장애인 등록증 사본</b>을 함께 제출해 주시면 검토에 도움이 됩니다. 제출은 시청 누리집 또는 민원실 방문으로 가능합니다.<br><br>
+      검토 결과는 접수일로부터 14일 이내에 문자로 안내해 드리겠습니다.</div>
+    <div class="stat"><span>초안 작성 <strong>3.1초</strong></span><span>상담원 수정 <strong>2곳</strong></span><span>외부 전송 <strong>0건</strong></span></div>
+    <div class="btns"><b class="p">초안 사용</b><b>수정 후 저장</b><b>다시 작성</b></div>
+  </div>
+</div>
+</body></html>

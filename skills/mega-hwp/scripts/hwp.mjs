@@ -2,8 +2,9 @@
 // mega-hwp — HWP/HWPX 읽기·생성·양식 채우기·렌더링. 엔진: @rhwp/core (Rust+WASM, MIT)
 //
 //   node hwp.mjs text   in.hwp                         본문+표를 마크다운으로 (표·셀 주소 포함)
-//   node hwp.mjs build  doc.json -o out.hwp            doc.json → .hwp / .hwpx (확장자로 결정)
-//   node hwp.mjs fill   form.hwp fill.json -o out.hwp  양식 채우기
+//   node hwp.mjs build  doc.json -o out.hwp [--render]  doc.json → .hwp / .hwpx (확장자로 결정)
+//   node hwp.mjs fill   form.hwp fill.json -o out.hwp [--render]  양식 채우기
+//     --render: 저장 직전 문서를 out/page-NN.png로 렌더 (그림 포함 — 아래 render는 저장된 파일의 그림을 못 그린다)
 //   node hwp.mjs render in.hwp [-o dir] [--pages 1-3]  페이지 PNG (rsvg-convert)
 //   node hwp.mjs hancom in.hwp [-o dir]                macOS: 한컴오피스로 열어 화면 캡처 (hancom.swift)
 //
@@ -518,6 +519,8 @@ function render(doc, out, pages) {
 }
 
 // ── cli ───────────────────────────────────────────────────────────────────
+// ponytail: 줄 배치를 지운 파일을 rhwp가 다시 열면 그림만 있는 문단을 높이 0으로 조판해 그림이 렌더에서 빠진다
+// (한컴은 정상). 그래서 검수 렌더는 저장 전 메모리 문서로 한다(build/fill --render). rhwp가 고치면 이 우회는 필요 없다.
 // 한컴은 파일에 저장된 줄 배치(lineseg)를 그대로 믿고 다시 조판하지 않는다. rhwp가 만든 줄 배치에는
 // 문단 들여쓰기·내어쓰기가 빠져 있어서(□○- 둘째 줄이 왼쪽 끝으로 붙음) HWPX에서 줄 배치를 모두 지우고
 // 한컴이 열 때 직접 조판하게 한다. .hwp가 필요하면 줄 배치 없는 HWPX를 다시 읽어 HWP로 내보낸다.
@@ -549,6 +552,8 @@ export async function main(argv) {
     const i = args.indexOf(k);
     return i < 0 ? undefined : args.splice(i, 2)[1];
   };
+  const flag = (k) => args.includes(k) && !!args.splice(args.indexOf(k), 1);
+  const renderToo = flag('--render');
   const out = opt('-o');
   const pages = opt('--pages');
   const [cmd, a, b] = args;
@@ -567,12 +572,14 @@ export async function main(argv) {
     for (const blk of spec.blocks) w.block(blk, path.dirname(path.resolve(a)));
     w.finish();
     const target = out || a.replace(/\.json$/, '.hwp');
+    if (renderToo) console.log(render(doc, target.replace(/\.hwpx?$/, ''), pages).join('\n'));
     save(core, doc, target);
     console.log(`${target} — ${doc.pageCount()}쪽`);
   } else if (cmd === 'fill') {
     const doc = open(a);
     fill(doc, JSON.parse(fs.readFileSync(b, 'utf8')), path.dirname(path.resolve(b)));
     const target = out || a.replace(/(\.hwpx?)$/, '.filled$1');
+    if (renderToo) console.log(render(doc, target.replace(/\.hwpx?$/, ''), pages).join('\n'));
     save(core, doc, target);
     console.log(`${target} — ${doc.pageCount()}쪽`);
   } else if (cmd === 'hancom') {

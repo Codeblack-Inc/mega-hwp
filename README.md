@@ -42,9 +42,8 @@ ln -s "$PWD/skills/mega-hwp" ~/.codex/skills/mega-hwp
 직접 실행:
 ```bash
 node skills/mega-hwp/scripts/hwp.mjs text  양식.hwp
-node skills/mega-hwp/scripts/hwp.mjs build skills/mega-hwp/examples/sample.json -o sample.hwp
+node skills/mega-hwp/scripts/hwp.mjs build skills/mega-hwp/examples/sample.json -o sample.hwp --render
 node skills/mega-hwp/scripts/hwp.mjs fill  양식.hwp fill.json -o 제출본.hwp
-node skills/mega-hwp/scripts/hwp.mjs render sample.hwp
 node skills/mega-hwp/scripts/hwp.mjs hancom sample.hwp   # macOS + 한컴오피스
 ```
 
@@ -67,6 +66,7 @@ gallery/                   갤러리 사이트 (node gallery/build.mjs → site/
 - `render` PNG의 글자 폭은 근사치다. 줄바꿈 위치는 한컴오피스와 조금 다를 수 있다 — 정확한 확인은 `hancom`.
 - 표 안의 표(중첩 표)는 읽기에서 바깥 칸 글자로만 나오고, 채우기 주소로 지정할 수 없다.
 - 글상자·도형 안의 글자는 읽지 않는다.
+- mega-hwp가 저장한 파일을 `render`로 다시 그리면 그림이 빠진다(rhwp 한계, 한컴에서는 정상). 검수는 `build`/`fill`의 `--render`로 한다.
 
 ## License
 MIT · HWP 엔진: [rhwp](https://github.com/edwardkim/rhwp) (MIT)
