@@ -74,6 +74,16 @@
 
 4. Codex를 다시 시작하고 말로 부탁합니다.
 
+> **모델 오류가 나면** — `The '…' model is not supported when using Codex with a ChatGPT account.`
+> ChatGPT 계정으로 로그인한 Codex는 쓸 수 있는 모델이 정해져 있습니다. 설정 파일 `~/.codex/config.toml`(Windows: `%USERPROFILE%\.codex\config.toml`)의 `model` 줄을 지원 모델로 바꾸세요.
+>
+> ```toml
+> model = "gpt-5.5"
+> ```
+>
+> 한 번만 바꿔 쓰려면 `codex -m gpt-5.5`. Codex 앱은 입력창 아래 모델 선택에서 고릅니다. 지원 모델은 요금제·시기에 따라 바뀌니, 오류가 나면 앱의 모델 목록에 보이는 것으로 고르세요.
+> 조사가 필요한 요청은 인터넷 접근이 필요합니다. 터미널에서 `codex exec`로 실행할 때는 `-c sandbox_workspace_write.network_access=true`를 붙이세요.
+
 ### D. Claude 채팅에 스킬 올리기 (설치 없음)
 
 1. 스킬 파일 내려받기: <https://codeblack-inc.github.io/mega-hwp/mega-hwp-skill.zip> (한글 엔진 포함, 약 4MB)
