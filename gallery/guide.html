@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>mega-hwp 초보자 가이드</title>
+<link rel="icon" href="symbol.svg" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+  body { margin: 0; font-family: "Pretendard Variable", Pretendard, sans-serif; color: #17152b; background: #fff; line-height: 1.7; }
+  header { border-bottom: 1px solid #e3e6ee; padding: 14px 20px; display: flex; gap: 16px; align-items: center; }
+  header a { color: #1F3864; text-decoration: none; font-weight: 600; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 { font-size: 28px; line-height: 1.35; } h2 { margin-top: 48px; border-top: 1px solid #e3e6ee; padding-top: 24px; } h3 { margin-top: 32px; }
+  a { color: #2f6fdb; } blockquote { margin: 16px 0; padding: 10px 16px; background: #F2F4F8; border-left: 4px solid #1F3864; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 15px; display: block; overflow-x: auto; }
+  th, td { border: 1px solid #d6d9e0; padding: 8px 10px; text-align: left; vertical-align: top; } th { background: #eef1f6; }
+  pre { background: #17152b; color: #f2f2f2; padding: 14px 16px; border-radius: 6px; overflow-x: auto; font-size: 14px; }
+  code { font-family: ui-monospace, Menlo, monospace; } :not(pre) > code { background: #eef1f6; padding: 1px 5px; border-radius: 4px; }
+  hr { border: 0; }
+</style>
+</head>
+<body>
+<header><a href="./">← mega-hwp 문서 갤러리</a><a href="https://codeblack-inc.github.io/mega-diagram/">mega-diagram</a><a href="https://github.com/Codeblack-Inc/mega-hwp">GitHub</a></header>
+<main id="doc">불러오는 중…</main>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script>
+fetch('guide.md').then((r) => r.text()).then((md) => {
+  document.getElementById('doc').innerHTML = marked.parse(md);
+  document.querySelectorAll('#doc h2').forEach((h) => (h.id = h.textContent.trim().replace(/\s+/g, '-').replace(/[^\w가-힣-]/g, '').toLowerCase()));
+});
+</script>
+</body>
+</html>

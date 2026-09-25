@@ -148,5 +148,6 @@ const rank = (x) => (RANK.includes(x.key) ? RANK.indexOf(x.key) : 0);
 items.sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || rank(a) - rank(b)); // 같은 묶음끼리 (sort는 안정 정렬)
 if (items.some((x) => !GROUPS.includes(x.group))) throw new Error('GROUPS에 없는 group');
 fs.writeFileSync(path.join(OUT, 'data.json'), JSON.stringify({ items }));
-for (const f of ['index.html', 'mega-hwp.svg', 'symbol.svg']) fs.copyFileSync(path.join(HERE, f), path.join(OUT, f));
+for (const f of ['index.html', 'mega-hwp.svg', 'symbol.svg', 'guide.html']) fs.copyFileSync(path.join(HERE, f), path.join(OUT, f));
+fs.copyFileSync(path.join(ROOT, 'docs/GUIDE.md'), path.join(OUT, 'guide.md'));
 console.log(`gallery → ${OUT} (${items.length}개 예시, ${new Set(items.flatMap((i) => i.variants.flatMap((v) => v.pages))).size}쪽)`);
