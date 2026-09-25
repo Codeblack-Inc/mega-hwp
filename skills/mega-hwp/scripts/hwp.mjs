@@ -66,6 +66,7 @@ export const THEME = {
   soft: '#F2F2F2', // 요약 상자
   guide: '#1F4FC1', // 작성요령 글자
   captions: 'label', // 'label' = <구성도> (샘플 방식) · 'numbered' = <표 1> 구성도
+  pageNumber: true, // 쪽 아래 가운데 "- 1 -". 표지·목차 쪽은 감추고 본문 첫 쪽부터 1
   // 용지 여백(mm) — 샘플 10종 중 8종이 좌우 20 · 위아래 15 · 머리말/꼬리말 10 (본문 폭 170mm)
   page: { left: 20, right: 20, top: 15, bottom: 15, header: 10, footer: 10 },
 };
@@ -113,6 +114,8 @@ export class Writer {
     this.breakNext = false;
     this.fig = { table: 0, figure: 0 };
     this.ctrlParas = new Set(); // 표·그림이 든 문단 (길이 0으로 보임)
+    this.marks = []; // 목차에 오를 제목 {level, text, p}
+    this.front = null; // 표지·목차 {hide: [문단], toc: [{p, text}], body: 본문 첫 문단}
     this.measure();
   }
   measure() {
@@ -183,6 +186,7 @@ export class Writer {
   // h1: 번호 없는 큰 제목(HY헤드라인M 16) · h2: 절 "1. …"(휴먼명조 굵게 15) · h3: 항 "가. …"(휴먼명조 굵게 13)
   heading(text, level) {
     const [pt, key, before, after] = { 1: [16, 'head', 16, 4], 2: [15, 'body', 14, 4], 3: [13, 'body', 8, 2] }[level];
+    if (level < 3) this.marks.push({ level, text, p: this.p });
     this.write(text, {
       char: { fontId: this.font(key), fontSize: pt * 100, bold: level > 1 },
       para: { alignment: 'left', marginLeft: level === 3 ? Math.round(0.4 * this.t.size * PT) : 0, spacingBefore: before * PT, spacingAfter: after * PT, keepWithNext: true },
@@ -220,13 +224,14 @@ export class Writer {
     const breakable = spec.breakable ?? rows.length > 6;
     J(doc.applyParaFormat(this.s, this.p, this.para({ alignment: 'center', lineSpacing: 100, spacingBefore: (spec.before ?? 0) * PT, keepWithNext: !!spec.keep, pageBreakBefore: this.takeBreak() })));
     J(doc.splitParagraph(this.s, this.p, 0)); // 표 문단은 길이가 0으로 잡혀 끝에서 가를 수 없다 — 다음 빈 문단을 먼저 만든다
-    const r = J(doc.createTableEx(JSON.stringify({ sectionIdx: this.s, paraIdx: this.p, charOffset: 0, rowCount: rows.length, colCount: nc, treatAsChar: !breakable, colWidths })));
+    const r = J(doc.createTableEx(JSON.stringify({ sectionIdx: this.s, paraIdx: this.p, charOffset: 0, rowCount: rows.length, colCount: nc, treatAsChar: true, colWidths })));
     const pp = r.paraIdx;
     const ctrl = r.controlIdx;
     for (const [r1, c1, r2, c2] of spec.merge || []) J(doc.mergeTableCells(this.s, pp, ctrl, r1, c1, r2, c2));
     const cells = J(doc.getTableDimensions(this.s, pp, ctrl)).cellCount;
+    // ponytail: rhwp createTableEx는 treatAsChar:false면 colWidths를 버리고 균등 분할한다 — 글자처럼 취급으로 만든 뒤 여기서 끈다
     // 쪽을 넘기는 표는 머리행을 다음 쪽에 반복한다 (한글 '제목 줄 자동 반복')
-    if (spec.header || breakable) J(doc.setTableProperties(this.s, pp, ctrl, JSON.stringify({ repeatHeader: !!spec.header, ...(breakable && { pageBreak: 2, textWrap: 'TopAndBottom', vertRelTo: 'Para', horzRelTo: 'Column', horzAlign: 'Center', vertOffset: 0, horzOffset: 0 }) })));
+    if (spec.header || breakable) J(doc.setTableProperties(this.s, pp, ctrl, JSON.stringify({ repeatHeader: !!spec.header, ...(breakable && { treatAsChar: false, pageBreak: 2, textWrap: 'TopAndBottom', vertRelTo: 'Para', horzRelTo: 'Column', horzAlign: 'Center', vertOffset: 0, horzOffset: 0 }) })));
     const align = spec.align || '';
     for (let cell = 0; cell < cells; cell++) {
       const { row, col } = J(doc.getCellInfo(this.s, pp, ctrl, cell));
@@ -235,7 +240,7 @@ export class Writer {
       const fill = head ? t.headerFill : spec.fills?.[`${row},${col}`];
       if (fill) Object.assign(props, { fillType: 'solid', fillColor: fill, patternType: -1 });
       if (spec.line) for (const k of ['borderLeft', 'borderRight', 'borderTop', 'borderBottom']) props[k] = { type: 1, width: 1, color: spec.line };
-      J(doc.setCellProperties(this.s, pp, ctrl, cell, JSON.stringify(props)));
+      J(doc.setCellProperties(this.s, pp, ctrl, cell, JSON.stringify({ ...props, ...spec.cell })));
       const text = rows[row]?.[col];
       if (text != null && text !== '') {
         fillCell(this, { pp, ctrl, cell }, String(text), {
@@ -265,6 +270,7 @@ export class Writer {
   chapter(text) {
     const m = /^\s*([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|\d+|[IVX]+|별첨\s*\d*|부록\s*\d*|붙임\s*\d*)[.)]?\s+(.+)$/.exec(text);
     if (!m) return this.heading(text, 1);
+    this.marks.push({ level: 1, text, p: this.p });
     const { pp, ctrl } = this.table({ widths: [/^[가-힣]/.test(m[1]) ? 1.6 : 1, 11], rows: [[m[1], m[2]]], line: this.t.accent, fills: { '0,0': this.t.accent }, size: 16, font: 'head', tight: true, before: 14, keep: true });
     fillCell(this, { pp, ctrl, cell: 0 }, m[1], { align: 'center', size: 16, font: 'head', color: '#FFFFFF' });
     fillCell(this, { pp, ctrl, cell: 1 }, m[2], { align: 'left', size: 16, font: 'head' });
@@ -282,16 +288,81 @@ export class Writer {
     this.blank(3, true);
   }
 
-  // 표지: 위 여백 → 제목 상자 → (아래쪽) 기관·날짜. 쪽 맨 위 spacingBefore는 무시되므로 빈 문단 높이로 민다
-  title({ text, sub, org, date }) {
-    this.blank(120);
-    const lines = [`**${text}**`, ...(sub ? [sub] : [])];
-    const { pp, ctrl } = this.box(lines, { fill: '#FFFFFF', align: 'c', size: 22, font: 'head', before: 0 });
-    if (sub) J(this.doc.applyCharFormatInCell(this.s, pp, ctrl, 0, 1, 0, len(sub), this.char({ fontId: this.font('body'), fontSize: 1500 })));
-    if (!org && !date) return;
-    this.blank(260);
-    for (const s of [date, org].filter(Boolean)) this.write(s, { char: { fontId: this.font('head'), fontSize: 1600 }, para: { alignment: 'center', spacingBefore: 6 * PT } });
+  // 표지: 사업명 → 굵은 위아래 선 사이 제목 → 문서 종류(자간 넓게) → (아래쪽) 기관 표 · 날짜 · 기관 · 제출처.
+  // 쪽 맨 위 spacingBefore는 무시되므로 빈 문단 높이로 민다
+  title({ text, program, doctype, sub, orgs, date, org, to }) {
+    const head = (pt, o = {}) => ({ char: { fontId: this.font('head'), fontSize: pt * 100 }, para: { alignment: 'center', ...o } });
+    this.front = { hide: [this.p], toc: [], body: null };
+    this.blank(program ? 70 : 100);
+    if (program) this.write(program, head(16, { spacingAfter: 10 * PT }));
+    const none = { type: 0, width: 0, color: '#000000' };
+    const rule = (type) => ({ type, width: 10, color: this.t.accent }); // 굵은선+가는선, 1mm
+    this.table({ rows: [[`**${text}**`]], size: 24, font: 'head', align: 'c', tight: true, cell: { paddingTop: 2200, paddingBottom: 2200, paddingLeft: 600, paddingRight: 600, borderLeft: none, borderRight: none, borderTop: rule(10), borderBottom: rule(9) } });
+    if (sub) this.write(sub, { char: { fontId: this.font('body'), fontSize: 1400 }, para: { alignment: 'center', spacingBefore: 10 * PT } });
+    if (doctype) {
+      this.blank(sub ? 30 : 44);
+      this.write([...doctype.replace(/\s/g, '')].join(' '), head(28));
+    }
+    const tail = [date, org, to].filter(Boolean);
+    if (!orgs && !tail.length) return void (this.breakNext = true);
+    // 아래 덩어리는 쪽 끝으로 민다: 빈 줄을 넉넉히 넣고, 조판해 보며 다음 쪽으로 넘치지 않을 때까지 뺀다
+    const spacer = this.p;
+    let lines = 30;
+    for (let i = 0; i < lines; i++) this.blank(20);
+    if (orgs) this.table({ rows: orgs, widths: [1, 2.4], width: 0.62, sideHeader: true, align: 'cl', size: 12, tight: true });
+    if (date) this.write(date, head(16, { spacingBefore: 14 * PT }));
+    if (org) this.write(org, head(18, { spacingBefore: 8 * PT }));
+    if (to) this.write(to, head(20, { spacingBefore: 22 * PT }));
+    if (this.batch) J(this.doc.endBatch());
+    const page = (q) => J(this.doc.getPageOfPosition(this.s, q)).page;
+    const cover = page(this.front.hide[0]);
+    const drop = () => {
+      J(this.doc.deleteParagraph(this.s, spacer));
+      this.p--;
+      lines--;
+      this.ctrlParas = new Set([...this.ctrlParas].map((q) => (q > spacer ? q - 1 : q)));
+    };
+    while (lines > 0 && page(this.p - 1) > cover) drop();
+    // 한컴은 rhwp보다 줄이 조금 높다 — 두 줄(40pt) 여유
+    for (let i = 0; i < 2 && lines > 0; i++) drop();
+    if (this.batch) J(this.doc.beginBatch());
     this.breakNext = true;
+  }
+
+  // 목차: 테두리 없는 줄 목록 — 장은 헤드라인체, 절은 한 단 들여쓰기, 오른쪽 끝 점선 탭 뒤 쪽번호(paginate가 채운다)
+  toc({ title = '목  차', items = [], depth = 2 }) {
+    this.front ??= { hide: [], toc: [], body: null };
+    this.front.hide.push(this.p);
+    this.front.depth = depth;
+    this.write(title, { char: { fontId: this.font('head'), fontSize: 2200 }, para: { alignment: 'center', spacingAfter: 24 * PT } });
+    // 오른쪽 정렬 · 점선. rhwp tabStops.position은 한컴 기준 두 배 단위다 — HWPUNIT 값을 그대로 넣으면 한컴(.hwp·.hwpx 모두)에서
+    // 탭이 본문 가운데에 선다. 두 배로 넣으면 한컴에서 오른쪽 끝, rhwp 렌더에선 줄 끝에서 멈춘다(둘 다 확인)
+    const tabStops = [{ position: 2 * (this.bodyW - 400), type: 1, fill: 2 }];
+    for (const { level, text } of items) {
+      const [key, pt, left, before] = level === 1 ? ['head', 14, 0, 9] : ['body', 13, 2, 1];
+      this.front.toc.push(this.p);
+      this.write(`${text}\t`, { char: { fontId: this.font(key), fontSize: pt * 100 }, para: { alignment: 'left', marginLeft: left * this.t.size * PT, spacingBefore: before * PT, lineSpacing: 150, tabStops } });
+    }
+    this.breakNext = true;
+  }
+
+  // 표지·목차 쪽은 쪽번호를 감추고, 본문 첫 문단에서 1로 새로 시작해 목차에 쪽번호를 채운다.
+  // 쪽 나누기가 끝난 뒤(endBatch 뒤)에 부른다.
+  // ponytail: 쪽번호는 rhwp 조판 기준 — 한컴은 글자 폭이 달라 뒤쪽 장에서 몇 쪽 어긋날 수 있다. 한글에서 [차례 새로 고침] 대신 손으로 고친다
+  paginate() {
+    const f = this.front;
+    if (!f) return;
+    const page = (p) => J(this.doc.getPageOfPosition(this.s, p)).page;
+    const hide = new Map();
+    for (const p of [...f.hide, ...f.toc]) if (!hide.has(page(p))) hide.set(page(p), p);
+    const marks = this.marks.filter((m) => m.level <= (f.depth ?? 2) && (f.body == null || m.p >= f.body));
+    const first = f.body == null ? 0 : page(f.body);
+    const nums = f.toc.map((p, i) => marks[i] && [p, String(page(marks[i].p) - first + 1)]).filter(Boolean);
+    J(this.doc.beginBatch());
+    for (const p of hide.values()) J(this.doc.setPageHide(this.s, p, false, false, false, false, false, true));
+    if (f.body != null) J(this.doc.insertNewNumber(this.s, f.body, 0, 1));
+    for (const [p, n] of nums) J(this.doc.insertText(this.s, p, this.doc.getParagraphLength(this.s, p), n));
+    J(this.doc.endBatch());
   }
 
   image(spec, base) {
@@ -313,8 +384,10 @@ export class Writer {
   }
 
   block(b, base) {
+    if (this.front && this.front.body == null && !['title', 'toc', 'pagebreak'].includes(b.type)) this.front.body = this.p;
     switch (b.type) {
       case 'title': return this.title(b);
+      case 'toc': return this.toc(b);
       case 'chapter': return this.chapter(b.text);
       case 'h1': return this.heading(b.text, 1);
       case 'h2': return this.heading(b.text, 2);
@@ -365,6 +438,10 @@ export function fillCell(w, { pp, ctrl, cell }, text, { bold = false, align = 'l
     }
   });
 }
+
+// 목차 항목: 장(chapter·h1) + 절(h2). Writer.marks와 같은 순서·같은 규칙이어야 쪽번호가 맞는다
+export const tocItems = (blocks, depth = 2) =>
+  blocks.flatMap((b) => (b.type === 'chapter' || b.type === 'h1' ? [{ level: 1, text: b.text }] : b.type === 'h2' && depth > 1 ? [{ level: 2, text: b.text }] : []));
 
 function imageSize(b) {
   if (b[0] === 0x89 && b[1] === 0x50) return { ext: 'png', w: (b[16] << 24) | (b[17] << 16) | (b[18] << 8) | b[19], h: (b[20] << 24) | (b[21] << 16) | (b[22] << 8) | b[23] };
@@ -599,20 +676,25 @@ function render(doc, out, pages) {
 // 한컴은 파일에 저장된 줄 배치(lineseg)를 그대로 믿고 다시 조판하지 않는다. rhwp가 만든 줄 배치에는
 // 문단 들여쓰기·내어쓰기가 빠져 있어서(□○- 둘째 줄이 왼쪽 끝으로 붙음) HWPX에서 줄 배치를 모두 지우고
 // 한컴이 열 때 직접 조판하게 한다. .hwp가 필요하면 줄 배치 없는 HWPX를 다시 읽어 HWP로 내보낸다.
-function stripLinesegs(hwpx) {
+function editSections(hwpx, fn) {
   const files = unzipSync(hwpx);
   const out = { mimetype: [files.mimetype, { level: 0 }] }; // mimetype은 맨 앞, 무압축
   for (const [name, data] of Object.entries(files)) {
     if (name === 'mimetype') continue;
-    out[name] = /^Contents\/section\d+\.xml$/.test(name)
-      ? strToU8(strFromU8(data).replace(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/g, ''))
-      : data;
+    out[name] = /^Contents\/section\d+\.xml$/.test(name) ? strToU8(fn(strFromU8(data), name)) : data;
   }
   return zipSync(out);
 }
 
-function save(core, doc, out) {
-  const hwpx = stripLinesegs(doc.exportHwpx());
+// 쪽 번호 "- 1 -"(아래 가운데). rhwp엔 쪽 번호 위치를 넣는 API가 없어 저장할 HWPX 첫 구역의 단 설정 뒤에 컨트롤을 끼운다.
+// ponytail: 메모리 문서엔 넣지 않는다 — HWPX를 다시 열면 그림 문단이 깨진다. 그래서 --render 그림엔 쪽 번호가 없다(한컴 화면엔 있다)
+const PAGE_NUM = '<hp:ctrl><hp:pageNum pos="BOTTOM_CENTER" formatType="DIGIT" sideChar="-"/></hp:ctrl>';
+
+function save(core, doc, out, { pageNum = false } = {}) {
+  const hwpx = editSections(doc.exportHwpx(), (xml, name) => {
+    xml = xml.replace(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/g, '');
+    return pageNum && name.endsWith('section0.xml') ? xml.replace(/(<hp:colPr[^>]*\/><\/hp:ctrl>)/, `$1${PAGE_NUM}`) : xml;
+  });
   const bytes = out.endsWith('.hwpx') ? hwpx : new core.HwpDocument(hwpx).exportHwp();
   fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
   fs.writeFileSync(out, bytes);
@@ -646,12 +728,14 @@ export async function main(argv) {
     const w = new Writer(doc, spec.theme);
     w.setupPage();
     J(doc.beginBatch()); // 편집마다 쪽 나누기를 다시 하지 않는다 — 긴 문서에서 수십 배 빠르다
-    for (const blk of spec.blocks) w.block(blk, path.dirname(path.resolve(a)));
+    w.batch = true;
+    for (const blk of spec.blocks) w.block(blk.type === 'toc' ? { items: tocItems(spec.blocks, blk.depth), ...blk } : blk, path.dirname(path.resolve(a)));
     w.finish();
     J(doc.endBatch());
+    w.paginate();
     const target = out || a.replace(/\.json$/, '.hwp');
     if (renderToo) console.log(render(doc, target.replace(/\.hwpx?$/, ''), pages).join('\n'));
-    save(core, doc, target);
+    save(core, doc, target, { pageNum: w.t.pageNumber });
     console.log(`${target} — ${doc.pageCount()}쪽`);
   } else if (cmd === 'fill') {
     const doc = open(a);

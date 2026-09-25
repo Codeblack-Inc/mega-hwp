@@ -7,7 +7,7 @@
 mega-hwp는 [mega 오픈소스 제품군](https://codeblack-inc.github.io/mega-bi/)의 한글 문서 도구다. HWP 파싱·저장·렌더링은 [rhwp](https://github.com/edwardkim/rhwp)(`@rhwp/core`, Rust+WASM, MIT)가 맡는다.
 
 - **읽기**: `.hwp`/`.hwpx` → 마크다운. 표는 병합을 풀어 마크다운 표로, 칸마다 주소를 달아 양식 채우기에 바로 쓴다
-- **새 문서**: `doc.json` → `.hwp`/`.hwpx`. 표지, 장 제목 띠, □○-·※ 기호별 서체·크기·내어쓰기, 병합 표·표 번호·출처, 핵심 요약 상자, 작성요령 상자, 그림
+- **새 문서**: `doc.json` → `.hwp`/`.hwpx`. 표지, 점선 목차(쪽번호 자동), 쪽번호 "- 1 -", 장 제목 띠, □○-·※ 기호별 서체·크기·내어쓰기, 병합 표·표 번호·출처, 핵심 요약 상자, 작성요령 상자, 그림
 - **양식 채우기**: 라벨 옆 칸 채우기(칸의 원래 서체 유지), 제목 뒤 본문 삽입(`ㅇ - *` 자리표시 줄 자동 삭제), 문구 치환, 누름틀, 작성요령 상자 일괄 삭제
 - **시각 검수**: 페이지를 PNG로 렌더링해 AI가 직접 보고 고친다. macOS에 한컴오피스가 있으면 실제 한컴 화면을 쪽마다 캡처해 검수한다(`hancom`)
 - **보고서체 기준**: 실제 정부과제 문서 10종(약 900쪽)의 용지·글자·표·문장·밀도를 직접 잰 값 → [`style-guide.md`](skills/mega-hwp/references/style-guide.md), 문서 종류별 표준 목차·절별 표·문장 규칙 → [`plan-guide.md`](skills/mega-hwp/references/plan-guide.md)(계획서) · [`result-guide.md`](skills/mega-hwp/references/result-guide.md)(결과·중간보고서)

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { main } from '../skills/mega-hwp/scripts/hwp.mjs';
+import { DELIVERABLES, GROUPS } from './deliverables.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -54,19 +55,31 @@ const release = await doc('press', fromJson(press));
 // 전체 분량 예시: 가상 과제 Jev의 사업수행계획서·결과보고서 (그림은 mega-diagram으로 그린 투명 PNG와 가상 화면)
 const jevPlan = await doc('jev-plan', fromJson(path.join(HERE, 'jev/plan.json')));
 const jevResult = await doc('jev-result', fromJson(path.join(HERE, 'jev/result.json')));
+// 과제 산출물 예시(가상 과제 Jev·Kora): gallery/<과제>/<key>.json — 목록은 DELIVERABLES
+const deliverables = [];
+for (const d of DELIVERABLES) {
+  const r = await doc(d.key, fromJson(path.join(HERE, d.proj, `${d.key}.json`)));
+  deliverables.push({ ...d, r });
+}
 const head = (f, n = 160) => { const t = src(f).split('\n'); return t.length > n ? t.slice(0, n).join('\n') + `\n… (전체 ${t.length}줄 — GitHub gallery/jev/)` : t.join('\n'); };
 await run(['text', formHwp, '-o', path.join(OUT, 'form.md')]);
 
+const hancom = (n) => `${n}쪽(한컴 기준 약 ${Math.round(n * 1.1)}쪽)`;
 const items = [
+  ...deliverables.map(({ key, proj, name, group, desc, tags, r }) => ({
+    key, name, group, desc: `${desc(hancom(r.pages.length))}`,
+    tags, variants: [{ key, name: '결과', ...r }],
+    code: { label: 'doc.json (앞부분)', text: head(path.join(HERE, proj, `${key}.json`)) },
+  })),
   {
-    key: 'jev-plan', name: '사업수행계획서 (전체)', group: '전체 분량 예시',
+    key: 'jev-plan', name: '사업수행계획서', group: 'Jev · 계획·보고',
     desc: `가상 과제 "Jev" 사업수행계획서 전체 ${jevPlan.pages.length}쪽(한컴 기준 약 60쪽). 실증형 사업계획서 표준 목차 Ⅰ~Ⅶ·별첨, 성과목표·평가비중·사업비(천원)·일정·인력·리스크 표, mega-diagram으로 그린 체계도·구성도·흐름도·간트·로드맵과 목표 화면 예시. 계획서라 실적 수치가 없다.`,
     tags: ['chapter', 'h2', 'h3', 'text', 'table', 'image', 'lint'],
     variants: [{ key: 'jev-plan', name: '결과', ...jevPlan }],
     code: { label: 'doc.json (앞부분)', text: head(path.join(HERE, 'jev/plan.json')) },
   },
   {
-    key: 'jev-result', name: '사업결과보고서 (전체)', group: '전체 분량 예시',
+    key: 'jev-result', name: '최종보고서 (사업결과보고서)', group: 'Jev · 계획·보고',
     desc: `같은 과제의 결과보고서 ${jevResult.pages.length}쪽(한컴 기준 약 100쪽). 전담기관 결과보고서 양식의 Ⅰ~Ⅵ와 ①②③④ 소단원 띠, 계획 대비 실적·부진현황·정량목표 달성현황(평가 비중·달성율)·사업비 집행(집행율) 표, 기관별 실증 화면과 성과 차트. 계획서의 목표·비중을 그대로 인용한다.`,
     tags: ['chapter', 'section', 'h3', 'text', 'table', 'image', 'lint'],
     variants: [{ key: 'jev-result', name: '결과', ...jevResult }],
@@ -130,6 +143,10 @@ const items = [
   },
 ];
 
+const RANK = ['jev-plan', 'jev-midterm', 'jev-monthly', 'jev-result']; // 계획·보고 묶음은 제출 순서로
+const rank = (x) => (RANK.includes(x.key) ? RANK.indexOf(x.key) : 0);
+items.sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || rank(a) - rank(b)); // 같은 묶음끼리 (sort는 안정 정렬)
+if (items.some((x) => !GROUPS.includes(x.group))) throw new Error('GROUPS에 없는 group');
 fs.writeFileSync(path.join(OUT, 'data.json'), JSON.stringify({ items }));
 for (const f of ['index.html', 'mega-hwp.svg', 'symbol.svg']) fs.copyFileSync(path.join(HERE, f), path.join(OUT, f));
 console.log(`gallery → ${OUT} (${items.length}개 예시, ${new Set(items.flatMap((i) => i.variants.flatMap((v) => v.pages))).size}쪽)`);

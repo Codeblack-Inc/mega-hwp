@@ -3,7 +3,7 @@ name: mega-hwp
 description: 한글(HWP/HWPX) 문서를 읽고, 만들고, 양식을 채운다. 사용자가 .hwp/.hwpx 파일을 주거나 사업계획서·결과보고서·중간보고서·월간보고·연구개발계획서·공문·제안서를 한글 파일로 만들어 달라고 할 때, 또는 정부과제 양식(작성요령이 있는 빈 양식)을 채워 달라고 할 때 사용. text(HWP→마크다운) → doc.json/fill.json 작성 → build/fill로 편집 가능한 .hwp 생성 → 페이지 PNG로 시각 검수. 한국어 우선.
 license: MIT
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # mega-hwp
@@ -26,14 +26,14 @@ node $SKILL/scripts/hwp.mjs hancom out.hwp                         # out-hancom/
 ### 1. 파악
 - 첨부된 `.hwp`/`.hwpx`는 먼저 `text`로 읽는다. 표는 `<!-- table sec= para= ctrl= -->` 주석과 함께 마크다운 표로 나온다.
 - **양식인가, 참고 자료인가?** 빈칸·`작성요령`·`ㅇ - *` 자리표시가 있으면 양식이다 → 3-B. 새로 쓰는 문서면 → 3-A.
-- **문서 종류별 가이드를 먼저 읽는다**: 사업계획서·수행계획서·연구개발계획서 → [`references/plan-guide.md`](references/plan-guide.md), 결과·중간·월간 보고서 → [`references/result-guide.md`](references/result-guide.md). 표준 목차, 절마다 쓰는 표(머리행), 문장 규칙이 실제 문서에서 잰 값으로 들어 있다.
+- **문서 종류별 가이드를 먼저 읽는다**: 사업계획서·수행계획서·연구개발계획서 → [`references/plan-guide.md`](references/plan-guide.md), 결과·중간·월간 보고서 → [`references/result-guide.md`](references/result-guide.md), 설계서·명세서·시험결과서·지침서·표준안·가명정보 처리대장·홍보 자료 같은 과제 산출물 → [`references/deliverable-guide.md`](references/deliverable-guide.md). 표준 목차, 절마다 쓰는 표(머리행), 문장 규칙이 실제 문서에서 잰 값으로 들어 있다.
 - 모르면 묻는다(최대 3개): 제출처와 목적, 분량, 소스 자료. **숫자는 소스에서만** 가져오고 없으면 `[확인 필요]`로 둔다.
 
 ### 2. 목차 확인
 쓰기 전에 장·절 제목과 절마다 핵심 문장 한 줄을 보여주고 확인을 받는다. 양식이면 양식의 목차를, 양식이 없으면 가이드의 표준 목차를 따른다.
 
 ### 3-A. 새 문서 → [`references/schema.md`](references/schema.md)
-`doc.json`의 `blocks`에 `title`·`chapter`·`section`·`h2`·`h3`·`text`·`table`·`box`·`guide`·`image`·`pagebreak`를 순서대로 쓴다. 예시: [`examples/sample.json`](examples/sample.json).
+`doc.json`의 `blocks`에 `title`·`toc`·`chapter`·`section`·`h2`·`h3`·`text`·`table`·`box`·`guide`·`image`·`pagebreak`를 순서대로 쓴다. 예시: [`examples/sample.json`](examples/sample.json).
 - 제목 위계: `chapter`(Ⅰ.) → `h2`(1.) → [`section`(①, 결과보고서)] → `h3`(가.) → `text`의 □ ○ -.
 - 본문은 `text` 블록에 **기호로 시작하는 줄**로 쓴다: `□`(제목구) → `○`(요지 한 줄) → `-`(근거·방법) → `·`(보충), `※`(주석), `⇒`(결론). → [`references/style-guide.md`](references/style-guide.md)
 - **표와 그림으로 쪽을 채운다.** 실제 문서는 표 속 글자가 본문보다 많고(1.2~16배) 쪽당 그림이 0.6개 이상이다. 개요·목표·일정·인력·예산·실적·산출물·위험은 표로 쓴다.
