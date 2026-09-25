@@ -1,0 +1,10 @@
+{
+  "name": "mega-hwp",
+  "interface": { "displayName": "mega-hwp" },
+  "plugins": [{
+    "name": "mega-hwp",
+    "source": { "source": "local", "path": "./" },
+    "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+    "category": "Productivity"
+  }]
+}

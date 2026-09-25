@@ -1,0 +1,6 @@
+{
+  "name": "mega-hwp",
+  "owner": { "name": "dr-coton" },
+  "metadata": { "description": "한글(HWP/HWPX) 문서를 읽고, 만들고, 양식을 채웁니다. 정부과제 사업계획서·결과보고서를 보고서체(□○-※ 개조식, 표, 작성요령 상자)로 생성하거나 빈 양식의 칸과 본문을 채운 편집 가능한 .hwp 파일을 만듭니다. 한국어 우선." },
+  "plugins": [{ "name": "mega-hwp", "source": "./" }]
+}
