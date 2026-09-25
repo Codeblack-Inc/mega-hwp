@@ -1,6 +1,6 @@
 <h1><img src="assets/mega-hwp.svg" alt="mega-hwp" width="220" /></h1>
 
-[mega 제품군](https://codeblack-inc.github.io/mega-bi/) · [브랜드 가이드와 로고](https://github.com/Codeblack-Inc/mega-bi)
+[문서 갤러리](https://codeblack-inc.github.io/mega-hwp/) · [mega 제품군](https://codeblack-inc.github.io/mega-bi/) · [브랜드 가이드와 로고](https://github.com/Codeblack-Inc/mega-bi)
 
 한글(HWP/HWPX) 문서를 AI가 읽고, 만들고, 정부과제 양식을 채우는 Claude Code / Codex 플러그인.
 
@@ -60,6 +60,7 @@ skills/mega-hwp/
   scripts/hancom.swift     한컴오피스로 열어 쪽마다 캡처 (macOS)
   examples/sample.json     예시 문서 (가상 과제)
 tests/test.mjs             왕복 테스트 (node tests/test.mjs)
+gallery/                   갤러리 사이트 (node gallery/build.mjs → site/, main에 push하면 Pages 배포)
 ```
 
 ## 한계

@@ -429,8 +429,9 @@ function fillByLabel(w, doc, { label, text, below = false, nth = 1, sec = 0, par
 }
 
 function keepStyleFill(w, doc, t, target, text) {
-  // 양식 칸의 원래 서체·크기를 유지한다
+  // 양식 칸의 원래 서체·크기를 유지한다. 빈 칸은 앞 문단 모양을 물려받아 믿을 수 없으므로 표 기본값을 쓴다
   w.s = t.sec;
+  if (!target.text) return fillCell(w, { pp: t.para, ctrl: t.ctrl, cell: target.cell }, text, {});
   const cp = J(doc.getCellCharPropertiesAt(t.sec, t.para, t.ctrl, target.cell, 0, 0));
   const align = J(doc.getCellParaPropertiesAt(t.sec, t.para, t.ctrl, target.cell, 0)).alignment;
   const size = cp.fontSize >= 800 ? cp.fontSize / 100 : undefined; // 빈 칸은 크기가 이상하게 작게 잡히기도 한다
@@ -462,7 +463,14 @@ export function fill(doc, spec, base) {
   // 작성요령 상자 지우기: 해당 문구가 든 표를 통째로
   for (const needle of spec.removeTables || []) {
     const hits = walk(doc).filter((t) => t.kind === 'table' && t.cells.some((c) => norm(c.text).includes(norm(needle)))).reverse();
-    for (const t of hits) J(doc.deleteTableControl(t.sec, t.para, t.ctrl));
+    for (const t of hits) {
+      J(doc.deleteTableControl(t.sec, t.para, t.ctrl));
+      // 표만 있던 문단이 빈 줄로 남으면 지운다
+      const blank = (q) => q >= 0 && q < doc.getParagraphCount(t.sec) && !paraText(doc, t.sec, q).trim() && J(doc.getControlTextPositions(t.sec, q)).length === 0;
+      if (blank(t.para)) J(doc.deleteParagraph(t.sec, t.para));
+      // 앞뒤로 빈 줄이 겹치면 하나만 남긴다
+      if (blank(t.para - 1) && blank(t.para)) J(doc.deleteParagraph(t.sec, t.para));
+    }
     if (!hits.length) warn(`fill.removeTables: '${needle}' 든 표 없음`);
   }
   // 앵커 문단 뒤에 블록 삽입 (뒤에서부터 넣어야 앞쪽 번호가 안 밀린다)
@@ -474,14 +482,14 @@ export function fill(doc, spec, base) {
   for (const ins of inserts) {
     const { sec, para } = ins;
     w.s = sec;
+    w.ctrlParas = new Set(); // 이전 삽입의 문단 번호는 여기서 의미가 없다
     // 앵커 바로 뒤의 자리표시 줄(ㅇ, -, * …)을 지운다. 표·그림 문단에서 멈춘다
     if (ins.dropPlaceholders !== false) {
       while (para + 1 < doc.getParagraphCount(sec) && J(doc.getControlTextPositions(sec, para + 1)).length === 0 && PLACEHOLDER.test(paraText(doc, sec, para + 1))) {
         J(doc.deleteParagraph(sec, para + 1));
       }
     }
-    J(doc.splitParagraph(sec, para, doc.getParagraphLength(sec, para)));
-    J(doc.splitParagraph(sec, para + 1, 0)); // 앵커 뒤 빈 문단 하나를 커서로
+    J(doc.splitParagraph(sec, para, doc.getParagraphLength(sec, para))); // 앵커 뒤 빈 문단 = 커서
     w.p = para + 1;
     for (const b of ins.blocks) w.block(b, base);
     if (doc.getParagraphLength(sec, w.p) === 0 && !w.ctrlParas.has(w.p)) J(doc.deleteParagraph(sec, w.p));
