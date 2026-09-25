@@ -7,6 +7,7 @@
 //     --render: 저장 직전 문서를 out/page-NN.png로 렌더 (그림 포함 — 아래 render는 저장된 파일의 그림을 못 그린다)
 //   node hwp.mjs render in.hwp [-o dir] [--pages 1-3]  페이지 PNG (rsvg-convert)
 //   node hwp.mjs hancom in.hwp [-o dir]                macOS: 한컴오피스로 열어 화면 캡처 (hancom.swift)
+//   node hwp.mjs lint   doc.json                       문장·밀도 점검 (실제 문서 기준, NG면 종료 코드 2)
 //
 // 스펙: references/schema.md
 import { execFileSync } from 'node:child_process';
@@ -51,28 +52,35 @@ const len = (s) => [...s].length;
 const PT = 200; // rhwp 문단 여백 단위: 1pt = 200
 
 // ── theme ─────────────────────────────────────────────────────────────────
-// 실제 사업계획서·결과보고서 12종에서 가장 흔한 조합 (references/style-guide.md)
+// 실제 사업계획서·결과보고서 10종(약 900쪽)에서 잰 값 (references/style-guide.md)
 export const THEME = {
-  body: '휴먼명조', // ○ - · 본문
-  head: 'HY헤드라인M', // 제목, □
-  table: '맑은 고딕', // 표·상자
-  note: '맑은 고딕', // ※
-  size: 13, // 본문 pt
-  lineSpacing: 160, // %
-  accent: '#1F3864', // 장 번호 칸, 선
-  headerFill: '#DCE3EE', // 표 머리행·머리열
-  soft: '#F2F4F8', // 요약 상자
+  body: '휴먼명조', // □ ○ - · 본문, 절 제목 — 샘플 본문의 66~73%
+  head: 'HY헤드라인M', // 장 띠·소단원 띠·표지
+  table: '맑은 고딕', // 표·상자 — 표 머리 글꼴 1위
+  note: '휴먼명조', // ※
+  size: 13, // 본문(-) pt. □ 14 굵게 · ○ 14 · · 12 · ※ 11 (정부 양식 작성요령 "□ 14p, ○ 14p, - 13p")
+  tableSize: 10, // 표 글자 — 샘플 표 머리·본문 1위
+  lineSpacing: 160, // % — 샘플 문단의 66~95%
+  accent: '#1F3864', // 장·소단원 번호 칸, 상자 선
+  headerFill: '#D6D6D6', // 표 머리행 — 샘플 1위 회색
+  soft: '#F2F2F2', // 요약 상자
   guide: '#1F4FC1', // 작성요령 글자
+  captions: 'label', // 'label' = <구성도> (샘플 방식) · 'numbered' = <표 1> 구성도
+  // 용지 여백(mm) — 샘플 10종 중 8종이 좌우 20 · 위아래 15 · 머리말/꼬리말 10 (본문 폭 170mm)
+  page: { left: 20, right: 20, top: 15, bottom: 15, header: 10, footer: 10 },
 };
 
 // 기호 → [수준, 글자 크기 차이(pt), 굵게, 서체 키]
 const MARKERS = {
-  '□': [0, 2, true, 'head'], '■': [0, 2, true, 'head'],
-  '○': [1, 0, false, 'body'], 'ㅇ': [1, 0, false, 'body'], '◦': [1, 0, false, 'body'],
-  '-': [2, 0, false, 'body'], '·': [3, -1, false, 'body'], '•': [3, -1, false, 'body'],
+  '□': [0, 1, true, 'body'], '■': [0, 1, true, 'body'],
+  '○': [1, 1, false, 'body'], 'ㅇ': [1, 1, false, 'body'], '◦': [1, 1, false, 'body'],
+  '-': [2, 0, false, 'body'], '⇒': [2, 0, false, 'body'], '→': [2, 0, false, 'body'],
+  '·': [3, -1, false, 'body'], '•': [3, -1, false, 'body'],
   '※': [2, -2, false, 'note'], '*': [3, -2, false, 'note'],
 };
-const WIDE = /[□■○◦ㅇ※]/;
+const WIDE = /[□■○◦ㅇ※⇒→]/;
+// 수준별 들여쓰기(em) — 샘플은 앞 공백 0·2·3~4칸 + 내어쓰기
+const LEVEL_EM = [0, 0.8, 1.6, 2.4];
 
 function marker(s) {
   const c = s[0];
@@ -98,15 +106,25 @@ function parseRuns(s) {
 export class Writer {
   constructor(doc, theme = {}, p = 0) {
     this.doc = doc;
-    this.t = { ...THEME, ...theme };
+    this.t = { ...THEME, ...theme, page: { ...THEME.page, ...theme.page } };
     this.p = p;
     this.s = 0; // 구역
     this.fonts = {};
     this.breakNext = false;
     this.fig = { table: 0, figure: 0 };
     this.ctrlParas = new Set(); // 표·그림이 든 문단 (길이 0으로 보임)
-    const d = J(doc.getPageDef(0));
+    this.measure();
+  }
+  measure() {
+    const d = J(this.doc.getPageDef(0));
     this.bodyW = d.width - d.marginLeft - d.marginRight - (d.marginGutter || 0);
+  }
+  // 새 문서의 용지 여백을 theme.page(mm)로 맞춘다 — 빈 문서 기본값(좌우 30mm)은 샘플보다 본문이 20mm 좁다
+  setupPage() {
+    const p = this.t.page;
+    const hu = (mm) => Math.round(mm * 283.465);
+    J(this.doc.setPageDef(0, JSON.stringify({ marginLeft: hu(p.left), marginRight: hu(p.right), marginTop: hu(p.top), marginBottom: hu(p.bottom), marginHeader: hu(p.header), marginFooter: hu(p.footer) })));
+    this.measure();
   }
   font(key) {
     const name = this.t[key] ?? key;
@@ -150,32 +168,36 @@ export class Writer {
     const s = raw.trim();
     const size = this.t.size;
     const m = marker(s);
+    // 표 위 단위 표기는 오른쪽 정렬·표 글자 크기 — 샘플 "(단위 : 천원)"
+    if (/^\(단위\s*:[^)]*\)$/.test(s)) return this.write(s, { char: { fontId: this.font('table'), fontSize: this.t.tableSize * 100 }, para: { alignment: 'right', spacingBefore: 4 * PT, keepWithNext: true } });
     if (!m) return this.write(s, { char: { fontId: this.font('body'), fontSize: size * 100 }, para: { spacingBefore: 2 * PT } });
     const [lvl, dSize, bold, fontKey] = m;
     const pt = size + dSize;
     const hang = (WIDE.test(s[0]) ? 1.35 : 0.85) * pt; // 둘째 줄이 기호 뒤 글자에 맞도록
     this.write(s, {
       char: { fontId: this.font(fontKey), fontSize: pt * 100, bold },
-      para: { marginLeft: Math.round((lvl * size + hang) * PT), indent: Math.round(-hang * PT), spacingBefore: [12, 5, 2, 1][lvl] * PT, keepWithNext: lvl === 0 },
+      para: { marginLeft: Math.round((LEVEL_EM[lvl] * size + hang) * PT), indent: Math.round(-hang * PT), spacingBefore: [10, 4, 1, 0][lvl] * PT, keepWithNext: lvl === 0 },
     });
   }
 
+  // h1: 번호 없는 큰 제목(HY헤드라인M 16) · h2: 절 "1. …"(휴먼명조 굵게 15) · h3: 항 "가. …"(휴먼명조 굵게 13)
   heading(text, level) {
-    const pt = level === 1 ? 16 : 14;
+    const [pt, key, before, after] = { 1: [16, 'head', 16, 4], 2: [15, 'body', 14, 4], 3: [13, 'body', 8, 2] }[level];
     this.write(text, {
-      char: { fontId: this.font('head'), fontSize: pt * 100 },
-      para: { alignment: 'left', spacingBefore: (level === 1 ? 16 : 12) * PT, spacingAfter: 4 * PT, keepWithNext: true },
+      char: { fontId: this.font(key), fontSize: pt * 100, bold: level > 1 },
+      para: { alignment: 'left', marginLeft: level === 3 ? Math.round(0.4 * this.t.size * PT) : 0, spacingBefore: before * PT, spacingAfter: after * PT, keepWithNext: true },
     });
   }
 
-  blank(pt = 6) {
+  blank(pt = 6, keep = false) {
     // 글자 크기 상한 때문에 큰 여백은 여러 줄로 나눈다
-    for (let left = pt; left > 0; left -= 40) this.write(' ', { char: { fontSize: Math.min(left, 40) * 100 }, para: { lineSpacing: 100 } });
+    for (let left = pt; left > 0; left -= 40) this.write(' ', { char: { fontSize: Math.min(left, 40) * 100 }, para: { lineSpacing: 100, keepWithNext: keep } });
   }
 
+  // 샘플 문서는 표·그림에 번호를 달지 않고 <전체 개념도>처럼 이름표만 단다 (theme.captions = 'numbered'면 <표 1> …)
   caption(text, kind) {
     const label = kind === 'table' ? '표' : '그림';
-    const s = /^[<〈[]/.test(text) ? text : `<${label} ${++this.fig[kind]}> ${text}`;
+    const s = /^[<〈[]/.test(text) ? text : this.t.captions === 'numbered' ? `<${label} ${++this.fig[kind]}> ${text}` : `< ${text} >`;
     this.write(s, {
       char: { fontId: this.font('table'), fontSize: (this.t.size - 2) * 100, bold: kind === 'table' },
       para: { alignment: 'center', spacingBefore: (kind === 'table' ? 8 : 2) * PT, spacingAfter: 3 * PT, keepWithNext: kind === 'table' },
@@ -193,18 +215,23 @@ export class Writer {
     const width = Math.round(this.bodyW * (spec.width ?? 1)) - 400;
     const colWidths = w.map((x) => Math.floor((width * x) / total));
     if (spec.caption) this.caption(spec.caption, 'table');
-    J(doc.applyParaFormat(this.s, this.p, this.para({ alignment: 'center', lineSpacing: 100, spacingBefore: (spec.before ?? 0) * PT, pageBreakBefore: this.takeBreak() })));
+    // 행이 많은 표는 '글자처럼 취급'을 끄고 셀 단위로 쪽을 나눈다 — 샘플의 큰 표 절반이 이 방식.
+    // 글자처럼 취급한 표는 쪽을 넘지 못해 통째로 다음 쪽으로 밀리고 앞 쪽에 큰 빈칸이 남는다.
+    const breakable = spec.breakable ?? rows.length > 6;
+    J(doc.applyParaFormat(this.s, this.p, this.para({ alignment: 'center', lineSpacing: 100, spacingBefore: (spec.before ?? 0) * PT, keepWithNext: !!spec.keep, pageBreakBefore: this.takeBreak() })));
     J(doc.splitParagraph(this.s, this.p, 0)); // 표 문단은 길이가 0으로 잡혀 끝에서 가를 수 없다 — 다음 빈 문단을 먼저 만든다
-    const r = J(doc.createTableEx(JSON.stringify({ sectionIdx: this.s, paraIdx: this.p, charOffset: 0, rowCount: rows.length, colCount: nc, treatAsChar: true, colWidths })));
+    const r = J(doc.createTableEx(JSON.stringify({ sectionIdx: this.s, paraIdx: this.p, charOffset: 0, rowCount: rows.length, colCount: nc, treatAsChar: !breakable, colWidths })));
     const pp = r.paraIdx;
     const ctrl = r.controlIdx;
     for (const [r1, c1, r2, c2] of spec.merge || []) J(doc.mergeTableCells(this.s, pp, ctrl, r1, c1, r2, c2));
     const cells = J(doc.getTableDimensions(this.s, pp, ctrl)).cellCount;
+    // 쪽을 넘기는 표는 머리행을 다음 쪽에 반복한다 (한글 '제목 줄 자동 반복')
+    if (spec.header || breakable) J(doc.setTableProperties(this.s, pp, ctrl, JSON.stringify({ repeatHeader: !!spec.header, ...(breakable && { pageBreak: 2, textWrap: 'TopAndBottom', vertRelTo: 'Para', horzRelTo: 'Column', horzAlign: 'Center', vertOffset: 0, horzOffset: 0 }) })));
     const align = spec.align || '';
     for (let cell = 0; cell < cells; cell++) {
       const { row, col } = J(doc.getCellInfo(this.s, pp, ctrl, cell));
       const head = (spec.header && row === 0) || (spec.sideHeader && col === 0);
-      const props = { verticalAlign: 1, applyInnerMargin: true, paddingLeft: 510, paddingRight: 510, paddingTop: 280, paddingBottom: 280 };
+      const props = { verticalAlign: 1, applyInnerMargin: true, paddingLeft: 510, paddingRight: 510, paddingTop: 280, paddingBottom: 280, isHeader: !!(spec.header && row === 0) };
       const fill = head ? t.headerFill : spec.fills?.[`${row},${col}`];
       if (fill) Object.assign(props, { fillType: 'solid', fillColor: fill, patternType: -1 });
       if (spec.line) for (const k of ['borderLeft', 'borderRight', 'borderTop', 'borderBottom']) props[k] = { type: 1, width: 1, color: spec.line };
@@ -214,7 +241,7 @@ export class Writer {
         fillCell(this, { pp, ctrl, cell }, String(text), {
           bold: head,
           align: head ? 'center' : { l: 'left', c: 'center', r: 'right' }[align[col]] || 'left',
-          size: spec.size ?? t.size - 2,
+          size: spec.size ?? t.tableSize,
           font: spec.font,
           color: spec.color,
         });
@@ -236,12 +263,23 @@ export class Writer {
 
   // 장 제목: [Ⅰ | 사업 개요] 두 칸 띠
   chapter(text) {
-    const m = /^\s*([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|\d+|[IVX]+)[.)]?\s+(.+)$/.exec(text);
+    const m = /^\s*([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|\d+|[IVX]+|별첨\s*\d*|부록\s*\d*|붙임\s*\d*)[.)]?\s+(.+)$/.exec(text);
     if (!m) return this.heading(text, 1);
-    const { pp, ctrl } = this.table({ widths: [1, 11], rows: [[m[1], m[2]]], line: this.t.accent, fills: { '0,0': this.t.accent }, size: 16, font: 'head', tight: true, before: 14 });
+    const { pp, ctrl } = this.table({ widths: [/^[가-힣]/.test(m[1]) ? 1.6 : 1, 11], rows: [[m[1], m[2]]], line: this.t.accent, fills: { '0,0': this.t.accent }, size: 16, font: 'head', tight: true, before: 14, keep: true });
     fillCell(this, { pp, ctrl, cell: 0 }, m[1], { align: 'center', size: 16, font: 'head', color: '#FFFFFF' });
     fillCell(this, { pp, ctrl, cell: 1 }, m[2], { align: 'left', size: 16, font: 'head' });
-    this.blank(4);
+    this.blank(4, true); // 띠와 다음 제목을 같은 쪽에
+  }
+
+  // 소단원 띠: [1 | 과제목표] — 결과보고서 양식의 "① 과제목표 ② 진행 상황 및 추진실적 …"
+  section(text) {
+    const m = /^\s*(\d+|[①-⑳])[.)]?\s+(.+)$/.exec(text);
+    if (!m) return this.heading(text, 2);
+    const num = /\d/.test(m[1]) ? m[1] : String('①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'.indexOf(m[1]) + 1);
+    const { pp, ctrl } = this.table({ widths: [1, 15], rows: [[num, m[2]]], line: this.t.accent, fills: { '0,0': this.t.accent }, size: 13, font: 'head', tight: true, before: 8, keep: true });
+    fillCell(this, { pp, ctrl, cell: 0 }, num, { align: 'center', size: 13, font: 'head', color: '#FFFFFF' });
+    fillCell(this, { pp, ctrl, cell: 1 }, m[2], { align: 'left', size: 13, font: 'head' });
+    this.blank(3, true);
   }
 
   // 표지: 위 여백 → 제목 상자 → (아래쪽) 기관·날짜. 쪽 맨 위 spacingBefore는 무시되므로 빈 문단 높이로 민다
@@ -264,7 +302,9 @@ export class Writer {
     if (!dim) return warn(`image: PNG/JPEG만 지원 ${spec.path}`);
     const width = Math.min(this.bodyW, Math.round((spec.width ?? 150) * 283.465)); // mm → HWPUNIT
     const height = Math.round((width * dim.h) / dim.w);
-    J(this.doc.applyParaFormat(this.s, this.p, this.para({ alignment: 'center', lineSpacing: 100, spacingBefore: 6 * PT, pageBreakBefore: this.takeBreak() })));
+    // 그림을 소개하는 앞 문단이 그림과 떨어지지 않게
+    if (this.p > 0 && !this.ctrlParas.has(this.p - 1)) J(this.doc.applyParaFormat(this.s, this.p - 1, JSON.stringify({ keepWithNext: true })));
+    J(this.doc.applyParaFormat(this.s, this.p, this.para({ alignment: 'center', lineSpacing: 100, spacingBefore: 6 * PT, keepWithNext: !!spec.caption, pageBreakBefore: this.takeBreak() })));
     J(this.doc.splitParagraph(this.s, this.p, 0));
     J(this.doc.insertPictureEx(JSON.stringify({ sectionIdx: this.s, paraIdx: this.p, charOffset: 0, width, height, naturalWidthPx: dim.w, naturalHeightPx: dim.h, extension: dim.ext, description: spec.caption || '' }), data));
     J(this.doc.setPictureProperties(this.s, this.p, 0, JSON.stringify({ treatAsChar: true }))); // 글자처럼 취급 → 문단 흐름 안에 둔다
@@ -278,6 +318,8 @@ export class Writer {
       case 'chapter': return this.chapter(b.text);
       case 'h1': return this.heading(b.text, 1);
       case 'h2': return this.heading(b.text, 2);
+      case 'h3': return this.heading(b.text, 3);
+      case 'section': return this.section(b.text);
       case 'text': return [].concat(b.lines ?? b.text).flatMap((l) => l.split('\n')).forEach((l) => (l.trim() ? this.line(l) : this.blank()));
       case 'table': return this.table(b);
       case 'box': return this.box([].concat(b.lines ?? b.text), { title: b.title });
@@ -298,7 +340,7 @@ export class Writer {
 // 표 셀 채우기 — 여러 줄(\n), 기호 들여쓰기, **굵게**. 기존 내용은 지운다.
 export function fillCell(w, { pp, ctrl, cell }, text, { bold = false, align = 'left', size, font = 'table', color } = {}) {
   const { doc } = w;
-  size ??= w.t.size - 2;
+  size ??= w.t.tableSize;
   const last = doc.getCellParagraphCount(w.s, pp, ctrl, cell) - 1;
   const end = doc.getCellParagraphLength(w.s, pp, ctrl, cell, last);
   if (last > 0 || end > 0) J(doc.deleteRangeInCell(w.s, pp, ctrl, cell, 0, 0, last, end));
@@ -497,6 +539,39 @@ export function fill(doc, spec, base) {
   }
 }
 
+// ── lint: 실제 문서 10종에서 잰 문장·밀도 기준 (references/style-guide.md §6·§7) ──
+export function lint(spec) {
+  const lines = [];
+  const cells = [];
+  for (const b of spec.blocks || []) {
+    // ㅇ·◦ 는 ○, ■ 는 □ 로 센다
+    if (b.type === 'text') [].concat(b.lines ?? b.text).flatMap((l) => String(l).split('\n')).forEach((l) => l.trim() && lines.push(l.trim().replace(/^[ㅇ◦](?=\s)/, '○').replace(/^■/, '□')));
+    if (b.type === 'table') for (const r of [...(b.header ? [b.header] : []), ...(b.rows || [])]) r.forEach((c) => c && cells.push(String(c)));
+    if (b.type === 'box' || b.type === 'guide') [].concat(b.lines ?? b.text).forEach((l) => l && cells.push(String(l)));
+  }
+  const by = (c) => lines.filter((l) => l[0] === c).map((l) => len(l));
+  const avg = (a) => (a.length ? Math.round((10 * a.reduce((x, y) => x + y, 0)) / a.length) / 10 : 0);
+  const sq = by('□'), ci = by('○'), da = by('-');
+  const num = lines.filter((l) => /\d/.test(l)).length;
+  const paren = lines.filter((l) => /^[○-]\s*\(/.test(l)).length;
+  const body = lines.reduce((a, l) => a + len(l), 0);
+  const tab = cells.reduce((a, c) => a + len(c), 0);
+  const arrows = lines.reduce((a, l) => a + (l.match(/→/g) || []).length, 0);
+  // 숫자 든 줄 비율 — 샘플 계획서 16%, 결과·중간보고서 34% → 기준 30% / 45%. 보도자료는 서술문·본문 위주라 표 비율을 보지 않는다
+  const kind = spec.kind || 'plan';
+  const numMax = kind === 'plan' ? 0.3 : 0.45;
+  const checks = [
+    [avg(sq) <= 15, `□ 평균 ${avg(sq)}자 (제목구, ≤15)`],
+    [avg(ci) <= 40, `○ 평균 ${avg(ci)}자 (한 줄, ≤40)`],
+    [da.length >= ci.length, `- ${da.length}줄 ≥ ○ ${ci.length}줄`],
+    [num <= numMax * Math.max(1, lines.length), `숫자 든 줄 ${Math.round((100 * num) / Math.max(1, lines.length))}% (${kind} ≤${numMax * 100})`],
+    [arrows === 0, `→ ${arrows}개 (0)`],
+    [paren <= 0.1 * Math.max(1, ci.length + da.length), `(소제목) ${paren}줄 (○·- 의 10% 이하)`],
+    [kind === 'press' || tab >= body, `표 글자 ${tab} ≥ 본문 ${body}${kind === 'press' ? ' (보도자료는 제외)' : ''}`],
+  ];
+  return checks.map(([ok, msg]) => `${ok ? 'OK' : 'NG'}  ${msg}`);
+}
+
 // ── render ────────────────────────────────────────────────────────────────
 function render(doc, out, pages) {
   fs.mkdirSync(out, { recursive: true });
@@ -569,6 +644,7 @@ export async function main(argv) {
     const doc = core.HwpDocument.createEmpty();
     doc.createBlankDocument();
     const w = new Writer(doc, spec.theme);
+    w.setupPage();
     J(doc.beginBatch()); // 편집마다 쪽 나누기를 다시 하지 않는다 — 긴 문서에서 수십 배 빠르다
     for (const blk of spec.blocks) w.block(blk, path.dirname(path.resolve(a)));
     w.finish();
@@ -584,6 +660,10 @@ export async function main(argv) {
     if (renderToo) console.log(render(doc, target.replace(/\.hwpx?$/, ''), pages).join('\n'));
     save(core, doc, target);
     console.log(`${target} — ${doc.pageCount()}쪽`);
+  } else if (cmd === 'lint') {
+    const res = lint(JSON.parse(fs.readFileSync(a, 'utf8')));
+    console.log(res.join('\n'));
+    if (res.some((r) => r.startsWith('NG'))) process.exitCode = 2;
   } else if (cmd === 'hancom') {
     // macOS + 한컴오피스: 실제 한컴 화면을 쪽마다 캡처 (scripts/hancom.swift)
     const dir = out || a.replace(/\.hwpx?$/, '') + '-hancom';

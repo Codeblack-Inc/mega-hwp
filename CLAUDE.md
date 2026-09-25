@@ -10,9 +10,13 @@ Claude Code + Codex 플러그인. 공용 스킬은 `skills/mega-hwp/` 하나 —
   - 한컴은 파일에 저장된 줄 배치(lineseg)를 그대로 쓰고 다시 조판하지 않는다. rhwp가 만든 줄 배치엔 들여쓰기·내어쓰기가 빠져 있어 `save()`가 HWPX에서 `linesegarray`를 모두 지운 뒤 저장한다(.hwp는 그 HWPX를 다시 읽어 변환)
   - 칸 배경은 `patternType: -1`(무늬 없음). 0이면 한컴이 가로줄 무늬로 그린다
 - 블록 추가: `Writer.block`의 switch → `references/schema.md` → `examples/sample.json`
+- 서식·문장 기준은 사용자가 준 실제 정부과제 문서 10종을 잰 값이다(`references/style-guide.md`). 기본값(`THEME`)·`lint` 기준을 바꿀 때는 근거가 되는 실측을 함께 고친다
+- `lint`: □·○ 길이, - 대 ○, 숫자 든 줄(plan 30% / report 45%), `→`, `(소제목)`, 표 대 본문. 예시 문서는 모두 통과해야 한다(테스트가 검사)
+- 표: 행 7개 이상이면 '글자처럼 취급'을 끄고 행 단위로 쪽을 나눈다(머리행 반복). 글자처럼 취급한 표는 쪽을 넘지 못해 통째로 밀린다
 - 테스트: `node tests/test.mjs`
 - 한컴 검수: `node skills/mega-hwp/scripts/hwp.mjs hancom /tmp/s.hwp` → `/tmp/s-hancom/hancom-NN.png`. rhwp 렌더와 한컴 화면이 다르면 한컴이 맞다. 레이아웃·서식을 바꿨으면 반드시 한컴으로도 본다
 - 시각 확인: `node skills/mega-hwp/scripts/hwp.mjs build skills/mega-hwp/examples/sample.json -o /tmp/s.hwp --render` → `/tmp/s/page-NN.png`. 저장된 파일을 `render`하면 그림만 있는 문단이 높이 0이 되어 그림이 빠진다(줄 배치를 지운 탓, 한컴은 정상) — 그래서 `--render`는 저장 전 메모리 문서로 그린다
 - 갤러리: `node gallery/build.mjs` → `site/` (sample.json + `gallery/*.json` 예시, rsvg-convert 필요). 예시 그림은 `gallery/mocks/*.html`을 Chrome 헤드리스로 캡처해 `gallery/assets/`에 커밋(CI는 재생성하지 않음, 가상 화면만). main에 push하면 `.github/workflows/pages.yml`이 Noto CJK 폰트를 설치하고 빌드·배포. 예시를 바꾸면 `hwp.mjs hancom`으로 한컴 화면도 확인한다(갤러리 문구가 "한컴오피스에서 확인"이라고 말한다)
 - 버전 올릴 때 `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`, SKILL.md `metadata.version` 함께 수정
+- `gallery/jev/`: 전체 분량 예시(가상 과제 Jev 계획서·결과보고서)와 그림. 원본 작업 폴더는 `out/jev/`(커밋 안 함) — 사실 시트 `facts.md`, 작성 브리프, 조각, 다이어그램 소스
 - 예시 콘텐츠는 가상의 과제만 쓴다 (실제 고객·과제 자료, 사용자가 준 양식 파일 커밋 금지)

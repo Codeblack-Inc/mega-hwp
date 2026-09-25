@@ -10,7 +10,8 @@ mega-hwp는 [mega 오픈소스 제품군](https://codeblack-inc.github.io/mega-b
 - **새 문서**: `doc.json` → `.hwp`/`.hwpx`. 표지, 장 제목 띠, □○-·※ 기호별 서체·크기·내어쓰기, 병합 표·표 번호·출처, 핵심 요약 상자, 작성요령 상자, 그림
 - **양식 채우기**: 라벨 옆 칸 채우기(칸의 원래 서체 유지), 제목 뒤 본문 삽입(`ㅇ - *` 자리표시 줄 자동 삭제), 문구 치환, 누름틀, 작성요령 상자 일괄 삭제
 - **시각 검수**: 페이지를 PNG로 렌더링해 AI가 직접 보고 고친다. macOS에 한컴오피스가 있으면 실제 한컴 화면을 쪽마다 캡처해 검수한다(`hancom`)
-- **보고서체 기준**: 실제 정부과제 문서 12종(약 900쪽) 분석 → [`style-guide.md`](skills/mega-hwp/references/style-guide.md)
+- **보고서체 기준**: 실제 정부과제 문서 10종(약 900쪽)의 용지·글자·표·문장·밀도를 직접 잰 값 → [`style-guide.md`](skills/mega-hwp/references/style-guide.md), 문서 종류별 표준 목차·절별 표·문장 규칙 → [`plan-guide.md`](skills/mega-hwp/references/plan-guide.md)(계획서) · [`result-guide.md`](skills/mega-hwp/references/result-guide.md)(결과·중간보고서)
+- **문장 점검**: `lint`가 □·○ 길이, - 대 ○ 비율, 숫자·화살표 남용, 표 대 본문 비율을 실제 문서 기준으로 잰다
 
 ## 설치
 
@@ -54,8 +55,8 @@ node skills/mega-hwp/scripts/hwp.mjs hancom sample.hwp   # macOS + 한컴오피�
 .agents/plugins/           Codex 마켓플레이스
 skills/mega-hwp/
   SKILL.md                 워크플로 (파악 → 목차 → doc.json/fill.json → 빌드 → 검수)
-  references/              schema.md(블록·양식 채우기 스펙) · style-guide.md(보고서체 기준)
-  scripts/hwp.mjs          text · build · fill · render · hancom
+  references/              schema.md(블록·양식 채우기 스펙) · style-guide.md(실측 서식·문장) · plan-guide.md(계획서) · result-guide.md(결과보고서)
+  scripts/hwp.mjs          text · build · fill · lint · render · hancom
   scripts/hancom.swift     한컴오피스로 열어 쪽마다 캡처 (macOS)
   examples/sample.json     예시 문서 (가상 과제)
 tests/test.mjs             왕복 테스트 (node tests/test.mjs)

@@ -19,9 +19,9 @@ for (const ext of ['hwp', 'hwpx']) {
   assert.deepEqual(warns, [], `${ext} 경고`);
   const items = walk(open(out));
   const tables = items.filter((i) => i.kind === 'table');
-  assert.equal(tables.length, 7, `${ext} 표 개수 (표지·장 2·요약·표 2·작성요령)`);
+  assert.equal(tables.length, 12, `${ext} 표 개수 (표지·장 3·요약·표 6·작성요령)`);
   const t = text(out);
-  for (const s of ['경량 한국어 LLM', '사업 개요', '핵심 요약', '□ 공공 민원', '상담 초안 작성 시간', '4.2점 이상', '세부 과제', '작성요령']) assert.ok(t.includes(s), `${ext}: '${s}' 없음`);
+  for (const s of ['온디바이스 LLM', '사업 개요', '핵심 요약', '□ 추진 배경', '⇒ 개인정보', '상담 초안 작성 시간', '4.2점 이상', '사업비중(%)', '작성요령']) assert.ok(t.includes(s), `${ext}: '${s}' 없음`);
   assert.ok(!t.includes('**'), `${ext}: 굵게 표시 ** 가 남음`);
   // 한컴은 patternType 0을 '가로줄 무늬'로 그린다. 단색 채우기는 실제 한글 파일처럼 -1(무늬 없음)이어야 한다
   const doc = open(out);
@@ -35,7 +35,7 @@ for (const ext of ['hwp', 'hwpx']) {
     const xml = strFromU8(unzipSync(new Uint8Array(fs.readFileSync(out)))['Contents/section0.xml']);
     assert.ok(!xml.includes('linesegarray'), 'hwpx: lineseg가 남음');
   }
-  const goal = tables.find((x) => x.cells.some((c) => c.text === '성과지표'));
+  const goal = tables.find((x) => x.cells.some((c) => c.text === '평가비중(%)'));
   assert.equal(goal.cells.find((c) => c.text === '정량').rowSpan, 3, '병합');
 }
 
@@ -73,7 +73,16 @@ for (const ext of ['hwp', 'hwpx']) {
   const out = path.join(tmp, `img.${ext}`);
   assert.deepEqual(await main(['build', imgSpec, '-o', out]), []);
   assert.equal(JSON.parse(open(out).getControls()).filter((c) => c.ctrlId === 'gso').length, 1, `${ext}: 그림 없음`);
-  assert.ok(text(out).includes('<그림 1> 구성도'), `${ext}: 그림 번호`);
+  assert.ok(text(out).includes('< 구성도 >'), `${ext}: 그림 번호`);
 }
+
+// 4. lint: 예시 문서는 실제 문서 기준을 모두 통과, 흔한 AI 초안(긴 □, 숫자·화살표 남발)은 걸린다
+const { lint } = await import('../skills/mega-hwp/scripts/hwp.mjs');
+for (const f of ['skills/mega-hwp/examples/sample.json', 'gallery/result.json', 'gallery/midterm.json', 'gallery/press.json']) {
+  const res = lint(JSON.parse(fs.readFileSync(path.join(root, f), 'utf8')));
+  assert.ok(res.every((r) => r.startsWith('OK')), `${f}: ${res.filter((r) => r.startsWith('NG')).join(', ')}`);
+}
+const bad = lint({ blocks: [{ type: 'text', lines: ['□ 공공 민원 상담은 개인정보 때문에 클라우드 LLM 도입이 어려워 온디바이스 추론이 필요함', '○ (배경) 상담 기록의 73%가 민감정보 → 외부 전송 불가, 2025년 조사 기준 12개 기관'] }] });
+assert.equal(bad.filter((r) => r.startsWith('NG')).length >= 4, true, 'lint가 AI 초안 패턴을 잡아야 함');
 
 console.log(`ok — ${tmp}`);
