@@ -569,8 +569,10 @@ export async function main(argv) {
     const doc = core.HwpDocument.createEmpty();
     doc.createBlankDocument();
     const w = new Writer(doc, spec.theme);
+    J(doc.beginBatch()); // 편집마다 쪽 나누기를 다시 하지 않는다 — 긴 문서에서 수십 배 빠르다
     for (const blk of spec.blocks) w.block(blk, path.dirname(path.resolve(a)));
     w.finish();
+    J(doc.endBatch());
     const target = out || a.replace(/\.json$/, '.hwp');
     if (renderToo) console.log(render(doc, target.replace(/\.hwpx?$/, ''), pages).join('\n'));
     save(core, doc, target);
