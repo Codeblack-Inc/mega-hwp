@@ -1,6 +1,6 @@
 <h1><img src="assets/mega-hwp.svg" alt="mega-hwp" width="220" /></h1>
 
-[문서 갤러리](https://codeblack-inc.github.io/mega-hwp/) · [mega 제품군](https://codeblack-inc.github.io/mega-bi/) · [브랜드 가이드와 로고](https://github.com/Codeblack-Inc/mega-bi)
+[문서 갤러리](https://codeblack-inc.github.io/mega-hwp/) · [**처음 쓰는 사람을 위한 가이드**](docs/GUIDE.md) · [mega 제품군](https://codeblack-inc.github.io/mega-bi/) · [브랜드 가이드와 로고](https://github.com/Codeblack-Inc/mega-bi)
 
 한글(HWP/HWPX) 문서를 AI가 읽고, 만들고, 정부과제 양식을 채우는 Claude Code / Codex 플러그인.
 
@@ -14,6 +14,8 @@ mega-hwp는 [mega 오픈소스 제품군](https://codeblack-inc.github.io/mega-b
 - **문장 점검**: `lint`가 □·○ 길이, - 대 ○ 비율, 숫자·화살표 남용, 표 대 본문 비율을 실제 문서 기준으로 잰다
 
 ## 설치
+
+> 코딩이 처음이면 [docs/GUIDE.md](docs/GUIDE.md)를 보세요 — Claude 앱·ChatGPT(Codex)에서 쓰는 법, 그림 플러그인 [mega-diagram](https://codeblack-inc.github.io/mega-diagram/)과 같이 쓰는 법.
 
 **Claude Code**
 ```text
